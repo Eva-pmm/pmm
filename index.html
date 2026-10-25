@@ -210,15 +210,25 @@ function sumHtml(){var isTO=S.type==="ТО",c={"":D.vehicles.length,sel:Object.k
     return'<button type="button" class="sm'+(S.f===t[0]?" act":"")+'" data-k="'+t[0]+'"><i style="background:'+t[2]+'"></i><b>'+c[t[0]]+'</b><span>'+t[1]+'</span></button>'}).join("")}
 function refreshSum(){var e=$("#sum");if(!e)return;e.innerHTML=sumHtml();bindSum()}
 function bindSum(){Array.prototype.forEach.call(document.querySelectorAll("#sum .sm"),function(b){b.onclick=function(){S.f=b.getAttribute("data-k");drawForm()}})}
+var LC={A:"А",B:"В",C:"С",E:"Е",H:"Н",I:"І",K:"К",M:"М",O:"О",P:"Р",T:"Т",X:"Х",Y:"У"};
+function nk(s){s=String(s).toUpperCase().replace(/\s+/g,"");var r="";for(var i=0;i<s.length;i++)r+=LC[s[i]]||s[i];return r.replace(/(\d)Г$/,"$1")}
+function topInv(){return '<div class="common" id="invtop" style="flex-wrap:wrap"><span><b>Одна накладна на всі авто</b> (масляний фільтр, для всіх авто з моторною оливою)</span><input type="text" inputmode="numeric" id="invn" placeholder="№" value="'+esc(S.inv.n)+'" style="width:90px"><span>від</span><input type="date" id="invd" value="'+esc(S.inv.d)+'"></div>'+
+ '<details class="common" id="grp" style="display:block"'+(S.gmsg?' open':'')+'><summary>Для частини авто — інша накладна</summary><div style="margin-top:8px"><p class="note">Напр.: 90 авто — за загальною накладною, ще 10 — за іншими. Вкажіть номери авто цієї групи, № і дату їхньої накладної; для кожної наступної групи повторіть.</p><textarea id="gp" rows="3" style="width:100%" placeholder="Номери авто: через пробіл, кому або з нового рядка"></textarea><div style="margin-top:8px"><input type="text" inputmode="numeric" id="gn" placeholder="№" style="width:90px"> від <input type="date" id="gd"> <button type="button" id="ga" class="go">Застосувати</button></div><div class="note" id="gm">'+esc(S.gmsg||"")+'</div></div></details>'}
+function bindInv(){var a=$("#invn"),b=$("#invd");if(!a)return;a.oninput=function(e){S.inv.n=e.target.value;drawFoot()};b.oninput=b.onchange=function(e){S.inv.d=e.target.value;drawFoot()};
+ $("#ga").onclick=function(){var txt=$("#gp").value,n=$("#gn").value.trim(),d=$("#gd").value;var m=txt.match(/[A-Za-zА-Яа-яІіЇїЄє]{2}\s*\d{3,4}|\d-\d{4}/g)||[];
+  if(!m.length||!n||!d){S.gmsg="Вкажіть номери авто, № і дату накладної.";drawForm();return}
+  var keys={};Object.keys(S.sel).forEach(function(p){keys[nk(p)]=p});var ok=0,no=[];
+  m.forEach(function(x){var p=keys[nk(x)];if(p){S.sel[p].own=true;S.sel[p].in=n;S.sel[p].id=d;ok++}else no.push(x)});
+  S.gmsg="Застосовано до "+ok+" авто."+(no.length?" Не позначено в заявці: "+no.join(", ")+".":"");drawForm()}}
 function drawForm(){
   if(S.done)return drawDone();
   var isTO=S.type==="ТО",q=S.q.trim().toUpperCase().replace(/\s/g,"");
   var list=D.vehicles.filter(function(v){if(S.f&&(S.f==="sel"?!S.sel[v.p]:vkey(v,S.sel[v.p])!==S.f))return false;return!q||(v.p+v.b).toUpperCase().replace(/\s/g,"").indexOf(q)>=0});
   page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · '+D.vehicles.length+' од. · '+esc(D.date)+'</div><h2>Заявка '+S.type+'</h2>'+
    '<p class="note">'+(isTO?"Позначте авто, впишіть показник одометра. Олива й норма — з бази; для трансмісії вкажіть вузол.":"Позначте авто. Кількість дорівнює нормі доливу (10% об'єму з допустимим округленням) — можна зменшити.")+'</p></div>'+
-   '<div class="sums" id="sum">'+sumHtml()+'</div><div class="tools"><input type="search" id="q" placeholder="Пошук: номер або марка" value="'+esc(S.q)+'" style="flex:1 1 200px"><button type="button" id="addv" class="go">Додати ТЗ</button></div>'+
+   (isTO?topInv():"")+'<div class="sums" id="sum">'+sumHtml()+'</div><div class="tools"><input type="search" id="q" placeholder="Пошук: номер або марка" value="'+esc(S.q)+'" style="flex:1 1 200px"><button type="button" id="addv" class="go">Додати ТЗ</button></div>'+
    '<div class="list" id="list"></div><div class="foot" id="foot"></div>';
-  var L=$("#list");
+  var L=$("#list");if(isTO)bindInv();
   if(!list.length)L.innerHTML='<p class="note">'+(D.vehicles.length?"Нічого не знайдено.":"За підрозділом «"+esc(D.unit)+"» авто не знайдено. Зверніться до служби ПММ.")+'</p>';
   list.forEach(function(v){var s=S.sel[v.p],st=vehState(v,s&&s.odo),el=document.createElement("div");el.className="veh"+(s?" on":"");
     el.innerHTML='<label class="vh"><input type="checkbox" '+(s?"checked":"")+'><div class="vt"><b>'+esc(v.p)+'</b><span>'+esc(v.b)+(v.k?" · "+esc(v.k):"")+'</span></div>'+(isTO?'<span class="pill '+st[1]+'" id="pl-'+esc(v.p).replace(/\W/g,"")+'">'+st[0]+'</span>':'')+(v.a?'<span class="pill p-warn">очікує акт</span>':'')+'</label>';
@@ -264,9 +274,9 @@ function totals(){var t={};Object.keys(S.sel).forEach(function(p){S.sel[p].sys.f
 function drawFoot(){var isTO=S.type==="ТО",n=Object.keys(S.sel).length,F=$("#foot");if(!F)return;
   var T2=totals(),pr=problems(),bad=Object.keys(T2).filter(function(o){return!/DOT|ДОТ|НЕВА/i.test(o)&&Math.abs(T2[o]*2-Math.round(T2[o]*2))>1e-9});
   if(!$("#fb")){/* поля накладної створюються один раз і не перемальовуються — клавіатура не скидається */
-    F.innerHTML='<div id="invrow">'+(isTO?'<div class="common"><span>Вкажіть № накладної на масляний фільтр (для всіх авто з моторною оливою)</span><input type="text" inputmode="numeric" id="invn" value="'+esc(S.inv.n)+'" style="width:90px"><span>від</span><input type="date" id="invd" value="'+esc(S.inv.d)+'"></div>':'')+'</div><div id="fb"></div>';
-    if(isTO){$("#invn").oninput=function(e){S.inv.n=e.target.value;drawFoot()};$("#invd").oninput=$("#invd").onchange=function(e){S.inv.d=e.target.value;drawFoot()}}}
-  var needInv=isTO&&Object.keys(S.sel).some(function(p){var s=S.sel[p];return!s.own&&s.sys.some(function(x){return x.id==="e"&&x.on})});var ir=$("#invrow");if(ir)ir.style.display=needInv?"":"none";
+    F.innerHTML='<div id="invrow"></div><div id="fb"></div>';
+    }
+  var needInv=isTO&&Object.keys(S.sel).some(function(p){var s=S.sel[p];return!s.own&&s.sys.some(function(x){return x.id==="e"&&x.on})});["#invtop","#grp"].forEach(function(q){var ir=$(q);if(ir)ir.style.display=needInv?(q==="#grp"?"block":""):"none"});
   $("#fb").innerHTML='<div class="common"><span>Отримання</span><div class="seg">'+["Центр","Схід"].map(function(p){return'<button type="button" aria-pressed="'+(S.place===p)+'" data-p="'+p+'">'+p+'</button>'}).join("")+'</div></div>'+
    '<div class="tot">'+(n?Object.keys(T2).map(function(o){return'<span class="'+(bad.indexOf(o)>=0?"bad":"")+'">'+esc(o)+' – '+f1(T2[o])+' л</span>'}).join(""):'<span>Оберіть авто</span>')+'</div>'+
    (bad.length?'<div class="err">Загальна кількість кожної оливи має бути кратною 0,5 л.</div>':'')+
