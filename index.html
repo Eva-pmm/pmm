@@ -204,9 +204,9 @@ function form(type){S={type:type,f:"",sel:{},place:"Центр",inv:{n:"",d:""},
 function vehState(v,odo){var iv=interval(v);if(!iv)return["індивідуально","p-info"];if(v.e.km==null)return["ТО не зареєстровано","p-warn"];
   var o=pnum(odo);if(o!=null){var left=v.e.km+iv-o;return left<=0?["можна на ТО","p-ok"]:["ще зарано, залишилось "+km(left),"p-warn"]}return["ТО на "+km(v.e.km+iv)+(v.tab==="БТ"?" км / 250 м/г":" км"),"p-ok"]}
 function vkey(v,s){var iv=interval(v);if(!iv)return"ind";if(v.e.km==null)return"noreg";var o=pnum(s&&s.odo);if(o==null)return"wait";return v.e.km+iv-o<=0?"due":"early"}
-var TILES=[["","Усі","#f5c542"],["sel","Вибрано","#4c8dff"],["due","Пора на ТО","#ff5c5c"],["early","Ще зарано","#4cc27e"],["wait","Очікує показник","#6f9bff"],["noreg","ТО не зареєстровано","#ff9f1c"],["ind","Індивідуально","#b18cff"]];
-function sumHtml(){var isTO=S.type==="ТО",c={"":D.vehicles.length,sel:Object.keys(S.sel).length,due:0,early:0,wait:0,noreg:0,ind:0};
-  D.vehicles.forEach(function(v){c[vkey(v,S.sel[v.p])]++});
+var TILES=[["","Усі","#f5c542"],["sel","Вибрано","#4c8dff"],["can","Можна подавати на ТО","#39d353"],["due","Пора на ТО","#ff5c5c"],["early","Ще зарано","#4cc27e"],["wait","Очікує показник","#6f9bff"],["noreg","ТО не зареєстровано","#ff9f1c"],["ind","Індивідуально","#b18cff"]];
+function sumHtml(){var isTO=S.type==="ТО",c={"":D.vehicles.length,sel:Object.keys(S.sel).length,can:0,due:0,early:0,wait:0,noreg:0,ind:0};
+  D.vehicles.forEach(function(v){var k=vkey(v,S.sel[v.p]);c[k]++;if(k==="due"||k==="noreg")c.can++});
   return TILES.filter(function(t){return(isTO||t[0]===""||t[0]==="sel")&&(t[0]===""||t[0]==="sel"||c[t[0]]>0)}).map(function(t){
     return'<button type="button" class="sm'+(S.f===t[0]?" act":"")+'" data-k="'+t[0]+'"><i style="background:'+t[2]+'"></i><b>'+c[t[0]]+'</b><span>'+t[1]+'</span></button>'}).join("")}
 function refreshSum(){var e=$("#sum");if(!e)return;e.innerHTML=sumHtml();bindSum()}
@@ -224,7 +224,7 @@ function bindInv(){var a=$("#invn"),b=$("#invd");if(!a)return;a.oninput=function
 function drawForm(){
   if(S.done)return drawDone();
   var isTO=S.type==="ТО",q=S.q.trim().toUpperCase().replace(/\s/g,"");
-  var list=D.vehicles.filter(function(v){if(S.f&&(S.f==="sel"?!S.sel[v.p]:vkey(v,S.sel[v.p])!==S.f))return false;return!q||(v.p+v.b).toUpperCase().replace(/\s/g,"").indexOf(q)>=0});
+  var list=D.vehicles.filter(function(v){if(S.f&&(S.f==="sel"?!S.sel[v.p]:S.f==="can"?(["due","noreg"].indexOf(vkey(v,S.sel[v.p]))<0):vkey(v,S.sel[v.p])!==S.f))return false;return!q||(v.p+v.b).toUpperCase().replace(/\s/g,"").indexOf(q)>=0});
   page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · '+D.vehicles.length+' од. · '+esc(D.date)+'</div><h2>Заявка '+S.type+'</h2>'+
    '<p class="note">'+(isTO?"Позначте авто, впишіть показник одометра. Олива й норма — з бази; для трансмісії вкажіть вузол.":"Позначте авто. Кількість дорівнює нормі доливу (10% об'єму з допустимим округленням) — можна зменшити.")+'</p></div>'+
    '<button type="button" id="allb" style="width:100%;margin:6px 0 12px;padding:15px;border:1px solid #4cc27e;border-radius:14px;background:rgba(76,194,126,.18);color:#4cc27e;font:inherit;font-size:16px;font-weight:bold;cursor:pointer">Отримати моторну оливу на всі авто підрозділу</button>'+(S.info?'<div class="common" style="display:block;border-color:#4c8dff">'+esc(S.info)+' <button type="button" id="showw" class="go">Показати їх</button></div>':"")+(isTO?topInv():"")+'<div class="sums" id="sum">'+sumHtml()+'</div><div class="tools"><input type="search" id="q" placeholder="Пошук: номер або марка" value="'+esc(S.q)+'" style="flex:1 1 200px"><button type="button" id="addv" class="go">Додати ТЗ</button></div>'+
