@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="uk"><head><base target="_top"><meta name="robots" content="noindex"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: single-column page opened from the bot link; PIN gate first. */
+:root{
+  --bg:#eef1f4; --panel:#fff; --ink:#18212b; --muted:#5b6876; --line:#d5dce3; --soft:#f4f6f9;
+  --accent:#2c6bed; --accent-ink:#fff; --chat:#e3e8ee; --bubble:#fff; --title:#a86b00;
+  --ok:#1f8a4c; --warn:#b86a00; --bad:#c62f2f; --info:#2c6bed; --chip:#e8eef8;
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f141a; --panel:#171e26; --ink:#e6ebf0; --muted:#94a2b1; --line:#2a3440; --soft:#1c242e;
+  --accent:#5b8cff; --accent-ink:#0b1220; --chat:#0b1015; --bubble:#222b36; --title:#f2c14e;
+  --ok:#4cc27e; --warn:#e9a23b; --bad:#ff6b6b; --info:#6f9bff; --chip:#1f2a3a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141a; --panel:#171e26; --ink:#e6ebf0; --muted:#94a2b1; --line:#2a3440; --soft:#1c242e;
+  --accent:#5b8cff; --accent-ink:#0b1220; --chat:#0b1015; --bubble:#222b36; --title:#f2c14e;
+  --ok:#4cc27e; --warn:#e9a23b; --bad:#ff6b6b; --info:#6f9bff; --chip:#1f2a3a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font:700 clamp(24px,4vw,36px)/1.1 var(--f-display);letter-spacing:-.01em}
+.eyebrow{font:600 11px/1.3 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+p{margin:0;max-width:68ch}
+.muted{color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;min-width:0}
+/* chat */
+.chat{display:flex;flex-direction:column;overflow:hidden}
+.chat-h{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.ava{width:34px;height:34px;border-radius:50%;background:var(--chip);display:grid;place-items:center;font:700 14px var(--f-display);color:var(--accent)}
+.feed{background:var(--chat);padding:14px;display:flex;flex-direction:column;gap:8px;min-height:300px;max-height:520px;overflow-y:auto}
+.msg{max-width:90%;padding:8px 12px;border-radius:16px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:4px}
+.bot{align-self:flex-start;background:var(--bubble);border-bottom-left-radius:4px}
+.bot a{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline}
+.cmds{display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px;border-top:1px solid var(--line)}
+.cmds button{flex:1 1 auto;border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:999px;padding:8px 12px;font:600 14px var(--f-body);cursor:pointer}
+.cmds button:hover{border-color:var(--accent);color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* screen */
+.screen{display:flex;flex-direction:column;overflow:hidden}
+.bar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);font:12px var(--f-mono);color:var(--muted);flex-wrap:wrap}
+.bar .url{flex:1 1 200px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--soft);border-radius:6px;padding:4px 8px}
+.page{padding:18px;display:flex;flex-direction:column;gap:14px;min-height:520px}
+.ph{display:flex;flex-direction:column;gap:4px}
+.ph h2{font:700 20px/1.2 var(--f-display);color:var(--title)}
+.empty{flex:1;display:grid;place-items:center;text-align:center;color:var(--muted);padding:40px 10px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input[type=search],input[type=text],input[type=number],input[type=date]{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:8px;padding:7px 10px;font:14px var(--f-body);min-width:0}
+input[type=number]{width:84px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--ink);padding:6px 12px;font:600 13px var(--f-body);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.list{display:flex;flex-direction:column;gap:8px}
+.veh{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+.veh.on{border-color:var(--accent)}
+.vh{display:flex;gap:10px;align-items:center;padding:9px 12px;cursor:pointer;min-width:0}
+.vh input{width:18px;height:18px;flex:none;accent-color:var(--accent)}
+.vt{flex:1;min-width:0;display:flex;flex-direction:column}
+.vt b{font:600 14px var(--f-mono)}
+.vt span{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{flex:none;font:600 11.5px var(--f-body);padding:3px 8px;border-radius:999px;white-space:nowrap}
+.p-ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.p-warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.p-bad{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.p-info{background:color-mix(in srgb,var(--info) 14%,transparent);color:var(--info)}
+.vb{border-top:1px dashed var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--soft)}
+.sys{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:8px;align-items:center;font-size:13.5px}
+.sys input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent)}
+.sys .nm{min-width:0}
+.sys .nm small{display:block;color:var(--muted);font-size:12px}
+.sys .oil{font:600 12.5px var(--f-mono)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13.5px}
+.err{color:var(--bad);font-size:12.5px}
+.foot{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);margin:0 -18px -18px;padding:12px 18px;display:flex;flex-direction:column;gap:10px}
+.common{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:13.5px}
+.tot{display:flex;flex-wrap:wrap;gap:6px}
+.tot span{font:600 12.5px var(--f-mono);padding:3px 8px;border-radius:6px;background:var(--chip)}
+.tot span.bad{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
+.go{border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:600 15px var(--f-body);padding:11px;cursor:pointer}
+.go:disabled{opacity:.45;cursor:not-allowed}
+.done{border:1px solid var(--ok);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.done pre{margin:0;font:12.5px/1.5 var(--f-mono);white-space:pre-wrap;background:var(--soft);padding:10px;border-radius:8px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
+th{font:600 10.5px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.akt{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.akt b{font-family:var(--f-mono)}
+.sum{display:flex;gap:8px;flex-wrap:wrap}
+.sum div{background:var(--soft);border-radius:10px;padding:8px 12px;display:flex;flex-direction:column}
+.sum b{font:700 20px var(--f-display)}
+.sum span{font-size:12px;color:var(--muted)}
+.note{font-size:12.5px;color:var(--muted)}
+</style><style>
+.wrap{max-width:760px}
+.gate{min-height:70vh;display:grid;place-items:center}
+.gbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 22px;display:flex;flex-direction:column;gap:14px;text-align:center;width:min(360px,100%)}
+.gbox h2{font:700 20px/1.2 var(--f-display);color:var(--title);margin:0}
+.pinin{font:600 28px/1 var(--f-mono);letter-spacing:.5em;text-align:center;padding:12px 0 12px .5em;background:var(--soft);border:1px solid var(--line);border-radius:10px;color:var(--ink);width:100%}
+.gerr{color:var(--bad);font-size:13px;min-height:1.2em;margin:0}
+.page{padding:0;min-height:0}
+.foot{margin:0;border-radius:12px;border:1px solid var(--line)}
+[hidden]{display:none!important}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="gate" id="gate">
+    <form class="gbox" id="gform" autocomplete="off">
+      <div class="eyebrow">Служба ПММ</div>
+      <h2 id="gtitle">Перевірка посилання…</h2>
+      <p class="note" id="gsub"></p>
+      <input class="pinin" id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" aria-label="PIN-код" hidden>
+      <button class="go" type="submit" id="gbtn" hidden>Відкрити</button>
+      <p class="gerr" id="gerr" role="alert"></p>
+    </form>
+  </div>
+  <div class="page" id="page" hidden></div>
+</div>
+<script>
+var T=new URLSearchParams(location.search).get("t")||"";
+var EXEC="https://script.google.com/macros/s/AKfycbx-PdUTpFrYKk9pg-OxnF9tOaGm3zgWQ-OWLQtJ1nsqcuGSyAnM2d5VE37yFO7rbRXH/exec";
+function mkRun(){var ok=null,fail=null,o={withSuccessHandler:function(f){ok=f;return o},withFailureHandler:function(f){fail=f;return o}};
+  ["portalInfo","portalOpen","portalSubmit","portalAddSheet"].forEach(function(n){o[n]=function(){var args=[].slice.call(arguments);
+    fetch(EXEC,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({portal:true,fn:n,args:args})})
+      .then(function(r){return r.json()}).then(function(j){if(j&&Object.prototype.hasOwnProperty.call(j,"r")){if(ok)ok(j.r)}else if(fail)fail(j)})
+      .catch(function(e){if(fail)fail(e)})}});return o}
+var google={script:{get run(){return mkRun()}}};
+</script>
+<script>
+(function(){
+var $=function(s){return document.querySelector(s)};
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function f1(n){return n==null?"—":(Math.round(n*100)/100).toString().replace(".",",")}
+function km(n){return n==null?"—":String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," ")}
+function pnum(s){var n=parseFloat(String(s).replace(",","."));return isFinite(n)?n:null}
+function oils(o){return String(o||"").split("/").map(function(s){return s.trim().toUpperCase()}).filter(Boolean)}
+function interval(v){var k=(v.k||"").toLowerCase(),b=(v.b||"").toLowerCase();
+  if(v.tab==="БТ")return 1000;
+  if(/трактор|екскаватор|навантажувач|кран|бульдозер|грейдер/.test(k))return null;
+  if(/master|daily|sprinter|touring|crafter/.test(b))return 15000;
+  if(/вантажівка|трал|евакуатор|кет-л|майстерня|спец\. авто|самоскид|тягач/.test(k))return 30000;
+  return 10000}
+function soNorm(vol){if(!vol)return null;var x=Math.round(vol*10)/100;x=Math.round(x*10)/10;var t=Math.round((x*10)%10);
+  if(t>=2&&t<=4)x=Math.floor(x)+0.5;else if(t>=7)x=Math.ceil(x);return Math.round(x*10)/10}
+var D=null,PIN="",page=$("#page"),S=null;
+
+/* ---------- PIN ---------- */
+google.script.run.withSuccessHandler(function(r){
+  if(!r||!r.ok){$("#gtitle").textContent=(r&&r.err)||"Посилання недійсне.";return}
+  if(r.life){var L=document.createElement("div");L.style.cssText="margin:14px auto;text-align:center;font-size:12px;opacity:.7;white-space:pre-line";L.textContent=r.life;document.body.appendChild(L)}
+  $("#gtitle").textContent=r.title;$("#gsub").textContent=r.unit+" · введіть PIN";
+  $("#pin").hidden=false;$("#gbtn").hidden=false;$("#pin").focus();
+}).withFailureHandler(function(){$("#gtitle").textContent="Помилка зв'язку. Оновіть сторінку."}).portalInfo(T);
+$("#gform").onsubmit=function(e){e.preventDefault();var p=$("#pin").value.trim();if(!p)return;$("#gbtn").disabled=true;$("#gerr").textContent="";
+  google.script.run.withSuccessHandler(function(r){$("#gbtn").disabled=false;
+    if(!r||!r.ok){$("#gerr").textContent=(r&&r.err)||"Помилка";if(!(r&&r.bad)){$("#pin").hidden=true;$("#gbtn").hidden=true}return}
+    PIN=p;D=r;$("#gate").hidden=true;page.hidden=false;
+    ({"то":function(){form("ТО")},"со":function(){form("СО")},"звірка":recon,"план":plan})[r.kind]();
+  }).withFailureHandler(function(){$("#gbtn").disabled=false;$("#gerr").textContent="Помилка зв'язку, спробуйте ще раз"}).portalOpen(T,p)};
+
+/* ---------- ТО / СО ---------- */
+function sysOf(v,type){var r=[],isTO=type==="ТО";
+  if(v.e.v)r.push({id:"e",nm:"Двигун",oil:oils(v.e.o)[0]||"",opts:oils(v.e.o),norm:isTO?v.e.v:soNorm(v.e.v),on:true,agg:"Двигун",qty:null});
+  if(v.t.v)r.push({id:"t",nm:"Трансмісія",oil:oils(v.t.o)[0]||"",opts:oils(v.t.o),norm:isTO?v.t.v:soNorm(v.t.v),on:!isTO,agg:isTO?"":"Трансмісія",qty:null});
+  if(v.g.v)r.push({id:"g",nm:"ГУР",oil:(v.g.o||"ATF"),opts:[v.g.o||"ATF"],norm:isTO?v.g.v:soNorm(v.g.v),on:false,agg:"ГУР",qty:null});
+  return r}
+function form(type){S={type:type,sel:{},place:"Центр",inv:{n:"",d:""},q:"",done:null};drawForm()}
+function vehState(v,odo){var iv=interval(v);if(!iv)return["індивідуально","p-info"];if(v.e.km==null)return["ТО не зареєстровано","p-warn"];
+  var o=pnum(odo);if(o!=null){var left=v.e.km+iv-o;return left<=0?["можна на ТО","p-ok"]:["ще зарано, залишилось "+km(left),"p-warn"]}return["ТО на "+km(v.e.km+iv)+(v.tab==="БТ"?" км / 250 м/г":" км"),"p-ok"]}
+function drawForm(){
+  if(S.done)return drawDone();
+  var isTO=S.type==="ТО",q=S.q.trim().toUpperCase().replace(/\s/g,"");
+  var list=D.vehicles.filter(function(v){return!q||(v.p+v.b).toUpperCase().replace(/\s/g,"").indexOf(q)>=0});
+  page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · '+D.vehicles.length+' од. · '+esc(D.date)+'</div><h2>Заявка '+S.type+'</h2>'+
+   '<p class="note">'+(isTO?"Позначте авто, впишіть показник одометра. Олива й норма — з бази; для трансмісії вкажіть вузол.":"Позначте авто. Кількість дорівнює нормі доливу (10% об'єму з допустимим округленням) — можна зменшити.")+'</p></div>'+
+   '<div class="tools"><input type="search" id="q" placeholder="Пошук: номер або марка" value="'+esc(S.q)+'" style="flex:1 1 200px"><button type="button" id="addv" class="go">Додати ТЗ</button></div>'+
+   '<div class="list" id="list"></div><div class="foot" id="foot"></div>';
+  var L=$("#list");
+  if(!list.length)L.innerHTML='<p class="note">'+(D.vehicles.length?"Нічого не знайдено.":"За підрозділом «"+esc(D.unit)+"» авто не знайдено. Зверніться до служби ПММ.")+'</p>';
+  list.forEach(function(v){var s=S.sel[v.p],st=vehState(v,s&&s.odo),el=document.createElement("div");el.className="veh"+(s?" on":"");
+    el.innerHTML='<label class="vh"><input type="checkbox" '+(s?"checked":"")+'><div class="vt"><b>'+esc(v.p)+'</b><span>'+esc(v.b)+(v.k?" · "+esc(v.k):"")+'</span></div>'+(isTO?'<span class="pill '+st[1]+'" id="pl-'+esc(v.p).replace(/\W/g,"")+'">'+st[0]+'</span>':'')+(v.a?'<span class="pill p-warn">очікує акт</span>':'')+'</label>';
+    el.querySelector("input").onchange=function(e){if(e.target.checked)S.sel[v.p]={odo:"",sys:sysOf(v,S.type)};else delete S.sel[v.p];drawForm()};
+    if(s)el.appendChild(vbody(v,s));L.appendChild(el)});
+  $("#addv").onclick=function(){var b=this;b.disabled=true;b.textContent="Створюю таблицю…";
+    google.script.run.withSuccessHandler(function(r){b.disabled=false;b.textContent="Додати ТЗ";
+      if(!r||!r.ok){alertBox((r&&r.err)||"Помилка");return}window.open(r.url,"_blank")||(location.href=r.url)})
+     .withFailureHandler(function(){b.disabled=false;b.textContent="Додати ТЗ";alertBox("Помилка зв'язку")}).portalAddSheet(T,PIN)};
+  $("#q").oninput=function(e){S.q=e.target.value;var p=e.target.selectionStart;drawForm();var n=$("#q");n.focus();n.setSelectionRange(p,p)};
+  drawFoot()}
+function vbody(v,s){var isTO=S.type==="ТО",b=document.createElement("div"),h="";b.className="vb";
+  if(isTO){var last=v.e.km!=null?"крайнє ТО "+km(v.e.km)+", "+esc(v.e.d):"ТО не зареєстровано";
+    h+='<div class="row"><span>Показник одометра</span><input type="text" inputmode="numeric" data-f="odo" value="'+esc(s.odo)+'" placeholder="'+(v.tab==="БТ"?"км / м/г":"км")+'" style="width:110px"><span class="note">'+last+'</span></div>'}
+  if(isTO&&s.sys.some(function(x){return x.id==="e"&&x.on}))h+='<div class="row"><label><input type="checkbox" data-f="own" '+(s.own?"checked":"")+'> Інша накладна для цього авто</label>'+(s.own?'<input type="text" inputmode="numeric" data-f="in" value="'+esc(s.in||"")+'" placeholder="№" style="width:90px"><input type="date" data-f="id" value="'+esc(s.id||"")+'">':'')+'</div>';
+  s.sys.forEach(function(x,i){h+='<div class="sys"><input type="checkbox" data-i="'+i+'" data-f="on" '+(x.on?"checked":"")+' aria-label="'+x.nm+'">'+
+    '<div class="nm">'+x.nm+(isTO&&x.id==="t"?' <input type="text" data-i="'+i+'" data-f="agg" value="'+esc(x.agg)+'" placeholder="вузол: КПП, задній міст…" style="width:170px">':'')+'<small>норма '+f1(x.norm)+' л'+(isTO?" (+0,5)":"")+'</small></div>'+
+    (x.opts.length>1?'<select data-i="'+i+'" data-f="oil">'+x.opts.map(function(o){return'<option '+(o===x.oil?"selected":"")+'>'+esc(o)+'</option>'}).join("")+'</select>':'<span class="oil">'+esc(x.oil||"—")+'</span>')+
+    '<input type="number" step="0.1" min="0" data-i="'+i+'" data-f="qty" value="'+(x.qty!=null?x.qty:x.norm)+'" aria-label="літрів"></div>'});
+  if(!s.sys.length)h+='<div class="err">У базі не зареєстровано об\'ємів систем — подайте заявку на це авто через бот текстом.</div>';
+  b.innerHTML=h;
+  b.querySelectorAll("[data-f]").forEach(function(inp){var f=inp.dataset.f,hnd=function(e){var t=e.target,i=t.dataset.i;
+    if(f==="own"){s.own=t.checked;drawForm();return}if(f==="in"){s.in=t.value;drawFoot();return}if(f==="id"){s.id=t.value;drawFoot();return}if(f==="odo"){s.odo=t.value;var pl=document.getElementById("pl-"+String(v.p).replace(/\W/g,""));if(pl){var q2=vehState(v,s.odo);pl.className="pill "+q2[1];pl.textContent=q2[0]}}else if(f==="on")s.sys[i].on=t.checked;else if(f==="oil")s.sys[i].oil=t.value;else if(f==="agg")s.sys[i].agg=t.value;else if(f==="qty")s.sys[i].qty=pnum(t.value);
+    if(f==="on")drawForm();else drawFoot()};
+    if(f==="on"||f==="oil"||f==="own"||f==="id")inp.onchange=hnd;else inp.oninput=hnd});
+  return b}
+function qOf(x){return x.qty!=null?x.qty:x.norm}
+function problems(){var isTO=S.type==="ТО",out=[],motor=false;
+  Object.keys(S.sel).forEach(function(p){var s=S.sel[p],v=D.vehicles.filter(function(x){return x.p===p})[0],on=s.sys.filter(function(x){return x.on});
+    if(!on.length){out.push(p+": не позначено жодної системи");return}
+    if(isTO){var o=pnum(String(s.odo).replace(/\s/g,""));
+      if(o==null)out.push(p+": вкажіть показник одометра");
+      else if(v.e.km!=null&&on.some(function(x){return x.id==="e"})){var iv=interval(v);if(o<=v.e.km)out.push(p+": пробіг менший за крайнє ТО ("+km(v.e.km)+")");
+        else if(iv&&o-v.e.km<iv*0.92)out.push(p+": від крайнього ТО "+km(o-v.e.km)+", регламент "+km(iv))}}
+    on.forEach(function(x){var q=qOf(x);if(q==null||q<=0)out.push(p+" · "+x.nm+": вкажіть кількість");
+      else if(q>x.norm+(isTO?0.5:0)+1e-9)out.push(p+" · "+x.nm+": "+f1(q)+" л понад норму "+f1(x.norm)+" л");
+      if(isTO&&x.id==="t"&&!String(x.agg).trim())out.push(p+": для трансмісії вкажіть вузол");
+      if(x.id==="e")motor=true})});
+  if(isTO){Object.keys(S.sel).forEach(function(p){var s=S.sel[p];if(!s.sys.some(function(x){return x.id==="e"&&x.on}))return;
+    var n=s.own?s.in:S.inv.n,d=s.own?s.id:S.inv.d;if(!String(n||"").trim()||!d)out.push(s.own?p+": вкажіть № і дату накладної":"Накладна на масляний фільтр: вкажіть № і дату (загальну або окрему для авто)")});}
+  return out}
+function totals(){var t={};Object.keys(S.sel).forEach(function(p){S.sel[p].sys.filter(function(x){return x.on}).forEach(function(x){var k=(x.oil||"?").toUpperCase();t[k]=(t[k]||0)+(qOf(x)||0)})});return t}
+function drawFoot(){var isTO=S.type==="ТО",n=Object.keys(S.sel).length,F=$("#foot");if(!F)return;
+  var T2=totals(),pr=problems(),bad=Object.keys(T2).filter(function(o){return!/DOT|ДОТ|НЕВА/i.test(o)&&Math.abs(T2[o]*2-Math.round(T2[o]*2))>1e-9});
+  if(!$("#fb")){/* поля накладної створюються один раз і не перемальовуються — клавіатура не скидається */
+    F.innerHTML='<div id="invrow">'+(isTO?'<div class="common"><span>Накладна на фільтр (для всіх авто) №</span><input type="text" inputmode="numeric" id="invn" value="'+esc(S.inv.n)+'" style="width:90px"><span>від</span><input type="date" id="invd" value="'+esc(S.inv.d)+'"></div>':'')+'</div><div id="fb"></div>';
+    if(isTO){$("#invn").oninput=function(e){S.inv.n=e.target.value;drawFoot()};$("#invd").oninput=$("#invd").onchange=function(e){S.inv.d=e.target.value;drawFoot()}}}
+  $("#fb").innerHTML='<div class="common"><span>Отримання</span><div class="seg">'+["Центр","Схід"].map(function(p){return'<button type="button" aria-pressed="'+(S.place===p)+'" data-p="'+p+'">'+p+'</button>'}).join("")+'</div></div>'+
+   '<div class="tot">'+(n?Object.keys(T2).map(function(o){return'<span class="'+(bad.indexOf(o)>=0?"bad":"")+'">'+esc(o)+' – '+f1(T2[o])+' л</span>'}).join(""):'<span>Оберіть авто</span>')+'</div>'+
+   (bad.length?'<div class="err">Загальна кількість кожної оливи має бути кратною 0,5 л.</div>':'')+
+   (n&&pr.length?'<div class="err">'+pr.slice(0,4).map(esc).join("<br>")+(pr.length>4?"<br>…ще "+(pr.length-4):"")+'</div>':'')+
+   '<button class="go" id="go" '+(!n||pr.length||bad.length?"disabled":"")+'>Подати заявку · '+n+' авто</button>';
+  F.querySelectorAll("[data-p]").forEach(function(b){b.onclick=function(){S.place=b.dataset.p;drawFoot()}});
+  $("#go").onclick=submit}
+function keepFocus(){var a=document.activeElement&&document.activeElement.id,pos=a==="invn"?document.activeElement.selectionStart:null;drawFoot();if(a){var n=document.getElementById(a);if(n){n.focus();if(pos!=null)n.setSelectionRange(pos,pos)}}}
+function submit(){var isTO=S.type==="ТО",g=$("#go");g.disabled=true;g.textContent="Надсилаю…";
+  var d=S.inv.d?S.inv.d.split("-"):null;
+  var payload={type:S.type,place:S.place,filter:{num:S.inv.n.trim(),date:d?d[2]+"."+d[1]+"."+d[0]:""},
+    vehicles:Object.keys(S.sel).map(function(p){var s=S.sel[p],dd=s.own&&s.id?s.id.split("-"):null;return{plate:p,filter:s.own&&String(s.in||"").trim()?{num:String(s.in).trim(),date:dd?dd[2]+"."+dd[1]+"."+dd[0]:""}:null,odometer:isTO?String(s.odo).replace(/\s/g,""):"",
+      items:s.sys.filter(function(x){return x.on}).map(function(x){return{oil:x.oil,qty:qOf(x),agg:x.agg||x.nm}})}})};
+  google.script.run.withSuccessHandler(function(r){
+    if(!r||!r.ok){g.disabled=false;g.textContent="Подати заявку";alertBox((r&&r.err)||"Не вдалося подати");return}
+    S.done={count:r.count};drawDone()}).withFailureHandler(function(){g.disabled=false;g.textContent="Подати заявку";alertBox("Помилка зв'язку, спробуйте ще раз")}).portalSubmit(T,PIN,payload)}
+function alertBox(t){var F=$("#foot");if(F)F.insertAdjacentHTML("afterbegin",'<div class="err">'+esc(t)+'</div>')}
+function drawDone(){page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+'</div><h2>Заявку '+S.type+' подано</h2></div>'+
+  '<div class="done"><b>Авто в заявці: '+S.done.count+'</b><p class="note">Заявка перевіряється за регламентом (1–2 хв). Результат прийде на пошту; статус — у боті командою «мої заявки». Посилання більше не діє.</p></div>'}
+
+/* ---------- Звірка ---------- */
+function recon(){var A=D.vehicles.filter(function(v){return v.a}),by={};
+  A.forEach(function(v){v.a.items.forEach(function(i){by[i.o]=(by[i.o]||0)+(i.q||0)})});
+  page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · станом на '+esc(D.date)+'</div><h2>Звірка: несписані видачі</h2>'+
+   '<p class="note">Видачі, погоджені за заявками, на які ще не надійшов акт списання (позначка «Очікую акт» у базі).</p></div>'+
+   '<div class="sum"><div><b>'+A.length+'</b><span>авто з несписаною видачею</span></div>'+Object.keys(by).map(function(o){return'<div><b>'+f1(by[o])+' л</b><span>'+esc(o)+'</span></div>'}).join("")+'</div>'+
+   '<div class="list">'+(A.length?A.map(function(v){return'<div class="akt"><div class="row" style="justify-content:space-between"><b>'+esc(v.p)+'</b><span class="pill p-warn">очікує акт</span></div><span>'+esc(v.b)+'</span>'+
+     '<span class="note">Заявка №'+esc(v.a.n)+' · погоджено '+esc(v.a.d)+(v.a.items.length?' · '+v.a.items.map(function(i){return esc(i.o)+" — "+f1(i.q)+" л ("+i.s.toLowerCase()+")"}).join(", "):"")+'</span></div>'}).join(""):'<p class="note">Несписаних видач немає.</p>')+'</div>'+
+   '<p class="note">Акт списання передайте діловоду служби ПММ; після внесення позначка знімається.</p>'}
+
+/* ---------- План ТО ---------- */
+function plan(){var R=D.vehicles.map(function(v){var iv=interval(v),nx=iv&&v.e.km!=null?v.e.km+iv:null;
+   var st=!iv?["індивідуально","p-info",3]:v.e.km==null?["ТО не зареєстровано","p-warn",1]:["за планом","p-ok",2];return{v:v,iv:iv,nx:nx,st:st}}).sort(function(a,b){return a.st[2]-b.st[2]||(a.nx||0)-(b.nx||0)});
+  function c(k){return R.filter(function(r){return r.st[2]===k}).length}
+  page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · моторна олива · '+esc(D.date)+'</div><h2>План ТО</h2>'+
+   '<p class="note">Крайнє зареєстроване ТО і пробіг, на якому настає наступне. Регламент: легкові, пікапи, буси — 10 000 км; великі буси — 15 000 км; вантажні, спецавто — 30 000 км; БТ — 1 000 км / 250 м/г.</p></div>'+
+   '<div class="sum"><div><b>'+c(2)+'</b><span>за планом</span></div><div><b>'+c(1)+'</b><span>ТО не зареєстровано</span></div><div><b>'+c(3)+'</b><span>індивідуально</span></div></div>'+
+   '<div class="tbl"><table><thead><tr><th>Номер</th><th>Марка</th><th>Крайнє ТО</th><th>Дата</th><th>Регламент</th><th>Наступне ТО</th><th>Стан</th></tr></thead><tbody>'+
+   R.map(function(r){return'<tr><td class="n">'+esc(r.v.p)+'</td><td>'+esc(r.v.b.length>28?r.v.b.slice(0,27)+"…":r.v.b)+'</td><td class="n">'+km(r.v.e.km)+'</td><td class="n">'+esc(r.v.e.d||"—")+'</td><td class="n">'+(r.iv?km(r.iv):"—")+'</td><td class="n"><b>'+km(r.nx)+'</b></td><td><span class="pill '+r.st[1]+'">'+r.st[0]+'</span></td></tr>'}).join("")+
+   '</tbody></table></div>'}
+})();
+
+</script>
+</body></html>
