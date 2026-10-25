@@ -292,12 +292,14 @@ function submit(){var isTO=S.type==="ТО",g=$("#go");g.disabled=true;g.textCont
   var payload={type:S.type,place:S.place,filter:{num:S.inv.n.trim(),date:d?d[2]+"."+d[1]+"."+d[0]:""},
     vehicles:Object.keys(S.sel).map(function(p){var s=S.sel[p],dd=s.own&&s.id?s.id.split("-"):null;return{plate:p,filter:s.own&&String(s.in||"").trim()?{num:String(s.in).trim(),date:dd?dd[2]+"."+dd[1]+"."+dd[0]:""}:null,odometer:isTO?String(s.odo).replace(/\s/g,""):"",
       items:s.sys.filter(function(x){return x.on}).map(function(x){return{oil:x.oil,qty:qOf(x),agg:x.agg||x.nm}})}})};
+  var cnt=payload.vehicles.length;S.done={count:cnt,wait:true};drawDone();
+  function back(t){S.done=null;drawForm();alertBox(t)}
   google.script.run.withSuccessHandler(function(r){
-    if(!r||!r.ok){g.disabled=false;g.textContent="Подати заявку";alertBox((r&&r.err)||"Не вдалося подати");return}
-    S.done={count:r.count};drawDone()}).withFailureHandler(function(){g.disabled=false;g.textContent="Подати заявку";alertBox("Помилка зв'язку, спробуйте ще раз")}).portalSubmit(T,PIN,payload)}
+    if(!r||!r.ok){back((r&&r.err)||"Не вдалося подати");return}
+    S.done={count:r.count};drawDone()}).withFailureHandler(function(){back("Помилка зв'язку, спробуйте ще раз")}).portalSubmit(T,PIN,payload)}
 function alertBox(t){var F=$("#foot");if(F)F.insertAdjacentHTML("afterbegin",'<div class="err">'+esc(t)+'</div>')}
-function drawDone(){page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+'</div><h2>Заявку '+S.type+' подано</h2></div>'+
-  '<div class="done"><b>Авто в заявці: '+S.done.count+'</b><p class="note">Заявка прийнята в роботу. Єва повідомить в Signal, що взяла її на опрацювання; невеликі заявки (до 5 авто) обробляються одразу, більші — орієнтовно за 1–3 хв (Signal і пошта); статус — у боті командою «мої заявки». Посилання більше не діє.</p></div>'}
+function drawDone(){var w=S.done.wait;page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+'</div><h2>'+(w?'Заявка формується…':'Заявку '+S.type+' подано')+'</h2></div>'+
+  '<div class="done"><b>Авто в заявці: '+S.done.count+'</b><p class="note">'+(w?'⏳ Заявка формується — зачекайте, будь ласка, 5–10 хв і не закривайте цю сторінку. Єва повідомить в Signal, коли візьме її на опрацювання, і надішле результат.':'✅ Заявка прийнята. Єва повідомить в Signal, що взяла її на опрацювання, і надішле результат (орієнтовно 5–10 хв). Статус — у боті командою «мої заявки». Посилання більше не діє.')+'</p></div>'}
 
 /* ---------- Звірка ---------- */
 function recon(){var A=D.vehicles.filter(function(v){return v.a}),by={};
