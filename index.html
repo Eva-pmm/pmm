@@ -164,10 +164,20 @@ google.script.run.withSuccessHandler(function(r){
 $("#gform").onsubmit=function(e){e.preventDefault();var p=$("#pin").value.trim();if(!p)return;$("#gbtn").disabled=true;$("#gerr").textContent="";
   google.script.run.withSuccessHandler(function(r){$("#gbtn").disabled=false;
     if(!r||!r.ok){$("#gerr").textContent=(r&&r.err)||"Помилка";if(!(r&&r.bad)){$("#pin").hidden=true;$("#gbtn").hidden=true}return}
-    PIN=p;D=r;$("#gate").hidden=true;page.hidden=false;
+    PIN=p;D=r;$("#gate").hidden=true;page.hidden=false;if(r.mode==="result"){showResult(r);return}
     ({"то":function(){form("ТО")},"со":function(){form("СО")},"звірка":recon,"план":plan})[r.kind]();
   }).withFailureHandler(function(){$("#gbtn").disabled=false;$("#gerr").textContent="Помилка зв'язку, спробуйте ще раз"}).portalOpen(T,p)};
 
+function showResult(r){var bs="padding:12px 24px;border:1px solid #4c8dff;border-radius:999px;background:rgba(76,141,255,.16);color:#4c8dff;font-size:15px;font-weight:bold";
+  page.innerHTML='<iframe id="rf" style="width:100%;border:0;border-radius:12px;background:#16191e"></iframe>'+(r.hasDoc?'<div style="margin:14px 0;text-align:center"><button id="dlb" style="'+bs+'">ЗАВАНТАЖИТИ ЗАЯВКУ (WORD)</button><div id="dle" style="margin-top:8px;font-size:13px"></div></div>':'')+(r.fix?'<div style="text-align:center;margin:12px 0"><a href="'+esc(r.fix)+'" target="_blank" style="color:#39d353;font-weight:bold">ВИПРАВИТИ ТА НАДІСЛАТИ ПОВТОРНО</a></div>':'');
+  var f=$("#rf");f.onload=function(){try{f.style.height=(f.contentDocument.body.scrollHeight+30)+"px"}catch(x){f.style.height="1200px"}};f.srcdoc=r.html;
+  if(r.hasDoc)$("#dlb").onclick=function(){var b=$("#dlb");b.disabled=true;$("#dle").textContent="Готується файл…";
+    google.script.run.withSuccessHandler(function(s){b.disabled=false;if(!s||!s.ok){$("#dle").textContent=(s&&s.err)||"Помилка";return}
+      var bin=atob(s.b64),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+      var url=URL.createObjectURL(new Blob([u],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}));
+      var a=document.createElement("a");a.href=url;a.download=s.name;document.body.appendChild(a);a.click();
+      $("#dle").innerHTML='Якщо завантаження не почалось — <a href="'+url+'" download="'+s.name+'" style="color:inherit">натисніть тут</a>'})
+    .withFailureHandler(function(){b.disabled=false;$("#dle").textContent="Помилка, спробуйте ще раз"}).portalDoc(T,PIN)}}
 /* ---------- ТО / СО ---------- */
 function sysOf(v,type){var r=[],isTO=type==="ТО";
   if(v.e.v)r.push({id:"e",nm:"Двигун",oil:oils(v.e.o)[0]||"",opts:oils(v.e.o),norm:isTO?v.e.v:soNorm(v.e.v),on:true,agg:"Двигун",qty:null});
