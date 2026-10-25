@@ -192,7 +192,7 @@ function sysOf(v,type){var r=[],isTO=type==="ТО";
   return r}
 function start(type){var n=D.vehicles.length;
   page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · '+n+' од. · '+esc(D.date)+'</div><h2>Заявка '+type+'</h2><p class="note">Оберіть, що робити.</p></div><div id="st" style="display:grid;gap:12px;max-width:560px"></div>';
-  var items=[["Отримати на все","Система запропонує оливу на всю техніку підрозділу ("+n+" од.)","#4cc27e",function(){form(type);D.vehicles.forEach(function(x){S.sel[x.p]={odo:"",sys:sysOf(x,type)}});drawForm()}],
+  var items=[["Отримати на все","Система запропонує оливу на всю техніку підрозділу ("+n+" од.)","#4cc27e",function(){form(type);var skip=0;D.vehicles.forEach(function(x){if(type==="СО"||vkey(x,null)==="noreg")S.sel[x.p]={odo:"",sys:sysOf(x,type)};else if(vkey(x,null)!=="ind")skip++});if(type==="ТО"&&skip)S.info="Позначено "+Object.keys(S.sel).length+" авто, на які можна отримати зараз (ТО ще не реєструвалось). Ще "+skip+" авто мають зареєстроване ТО: щоб система визначила, чи настав термін, позначте їх і вкажіть показник одометра.";drawForm()}],
     ["Отримати на вибір","Самостійно позначте потрібні авто","#4c8dff",function(){form(type)}],
     ["Списати все","Скоро","#6b7280",null],["Списати на вибір","Скоро","#6b7280",null]];
   items.forEach(function(it){var b=document.createElement("button");b.type="button";
@@ -226,9 +226,9 @@ function drawForm(){
   var list=D.vehicles.filter(function(v){if(S.f&&(S.f==="sel"?!S.sel[v.p]:vkey(v,S.sel[v.p])!==S.f))return false;return!q||(v.p+v.b).toUpperCase().replace(/\s/g,"").indexOf(q)>=0});
   page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · '+D.vehicles.length+' од. · '+esc(D.date)+'</div><h2>Заявка '+S.type+'</h2>'+
    '<p class="note">'+(isTO?"Позначте авто, впишіть показник одометра. Олива й норма — з бази; для трансмісії вкажіть вузол.":"Позначте авто. Кількість дорівнює нормі доливу (10% об'єму з допустимим округленням) — можна зменшити.")+'</p></div>'+
-   (isTO?topInv():"")+'<div class="sums" id="sum">'+sumHtml()+'</div><div class="tools"><input type="search" id="q" placeholder="Пошук: номер або марка" value="'+esc(S.q)+'" style="flex:1 1 200px"><button type="button" id="addv" class="go">Додати ТЗ</button></div>'+
+   (S.info?'<div class="common" style="display:block;border-color:#4c8dff">'+esc(S.info)+' <button type="button" id="showw" class="go">Показати їх</button></div>':"")+(isTO?topInv():"")+'<div class="sums" id="sum">'+sumHtml()+'</div><div class="tools"><input type="search" id="q" placeholder="Пошук: номер або марка" value="'+esc(S.q)+'" style="flex:1 1 200px"><button type="button" id="addv" class="go">Додати ТЗ</button></div>'+
    '<div class="list" id="list"></div><div class="foot" id="foot"></div>';
-  var L=$("#list");if(isTO)bindInv();
+  var L=$("#list");if(isTO)bindInv();var sw=$("#showw");if(sw)sw.onclick=function(){S.f="wait";drawForm()};
   if(!list.length)L.innerHTML='<p class="note">'+(D.vehicles.length?"Нічого не знайдено.":"За підрозділом «"+esc(D.unit)+"» авто не знайдено. Зверніться до служби ПММ.")+'</p>';
   list.forEach(function(v){var s=S.sel[v.p],st=vehState(v,s&&s.odo),el=document.createElement("div");el.className="veh"+(s?" on":"");
     el.innerHTML='<label class="vh"><input type="checkbox" '+(s?"checked":"")+'><div class="vt"><b>'+esc(v.p)+'</b><span>'+esc(v.b)+(v.k?" · "+esc(v.k):"")+'</span></div>'+(isTO?'<span class="pill '+st[1]+'" id="pl-'+esc(v.p).replace(/\W/g,"")+'">'+st[0]+'</span>':'')+(v.a?'<span class="pill p-warn">очікує акт</span>':'')+'</label>';
