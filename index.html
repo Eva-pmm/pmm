@@ -53,6 +53,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .ph{display:flex;flex-direction:column;gap:4px}
 .ph h2{font:700 20px/1.2 var(--f-display);color:var(--title)}
 .empty{flex:1;display:grid;place-items:center;text-align:center;color:var(--muted);padding:40px 10px}
+.sums{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}.sm{display:flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid var(--line);border-radius:14px;background:var(--card,transparent);color:inherit;font:inherit;cursor:pointer}.sm i{width:9px;height:9px;border-radius:50%;flex:none}.sm b{font-size:20px}.sm span{font-size:13px;opacity:.85}.sm.act{border:2px solid #f5c542}
 .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 input[type=search],input[type=text],input[type=number],input[type=date]{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:8px;padding:7px 10px;font:14px var(--f-body);min-width:0}
 input[type=number]{width:84px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
@@ -184,16 +185,24 @@ function sysOf(v,type){var r=[],isTO=type==="ТО";
   if(v.t.v)r.push({id:"t",nm:"Трансмісія",oil:oils(v.t.o)[0]||"",opts:oils(v.t.o),norm:isTO?v.t.v:soNorm(v.t.v),on:!isTO,agg:isTO?"":"Трансмісія",qty:null});
   if(v.g.v)r.push({id:"g",nm:"ГУР",oil:(v.g.o||"ATF"),opts:[v.g.o||"ATF"],norm:isTO?v.g.v:soNorm(v.g.v),on:false,agg:"ГУР",qty:null});
   return r}
-function form(type){S={type:type,sel:{},place:"Центр",inv:{n:"",d:""},q:"",done:null};drawForm()}
+function form(type){S={type:type,f:"",sel:{},place:"Центр",inv:{n:"",d:""},q:"",done:null};drawForm()}
 function vehState(v,odo){var iv=interval(v);if(!iv)return["індивідуально","p-info"];if(v.e.km==null)return["ТО не зареєстровано","p-warn"];
   var o=pnum(odo);if(o!=null){var left=v.e.km+iv-o;return left<=0?["можна на ТО","p-ok"]:["ще зарано, залишилось "+km(left),"p-warn"]}return["ТО на "+km(v.e.km+iv)+(v.tab==="БТ"?" км / 250 м/г":" км"),"p-ok"]}
+function vkey(v,s){var iv=interval(v);if(!iv)return"ind";if(v.e.km==null)return"noreg";var o=pnum(s&&s.odo);if(o==null)return"wait";return v.e.km+iv-o<=0?"due":"early"}
+var TILES=[["","Усі","#f5c542"],["sel","Вибрано","#4c8dff"],["due","Пора на ТО","#ff5c5c"],["early","Ще зарано","#4cc27e"],["wait","Очікує показник","#6f9bff"],["noreg","ТО не зареєстровано","#ff9f1c"],["ind","Індивідуально","#b18cff"]];
+function sumHtml(){var isTO=S.type==="ТО",c={"":D.vehicles.length,sel:Object.keys(S.sel).length,due:0,early:0,wait:0,noreg:0,ind:0};
+  D.vehicles.forEach(function(v){c[vkey(v,S.sel[v.p])]++});
+  return TILES.filter(function(t){return(isTO||t[0]===""||t[0]==="sel")&&(t[0]===""||t[0]==="sel"||c[t[0]]>0)}).map(function(t){
+    return'<button type="button" class="sm'+(S.f===t[0]?" act":"")+'" data-k="'+t[0]+'"><i style="background:'+t[2]+'"></i><b>'+c[t[0]]+'</b><span>'+t[1]+'</span></button>'}).join("")}
+function refreshSum(){var e=$("#sum");if(!e)return;e.innerHTML=sumHtml();bindSum()}
+function bindSum(){Array.prototype.forEach.call(document.querySelectorAll("#sum .sm"),function(b){b.onclick=function(){S.f=b.getAttribute("data-k");drawForm()}})}
 function drawForm(){
   if(S.done)return drawDone();
   var isTO=S.type==="ТО",q=S.q.trim().toUpperCase().replace(/\s/g,"");
-  var list=D.vehicles.filter(function(v){return!q||(v.p+v.b).toUpperCase().replace(/\s/g,"").indexOf(q)>=0});
+  var list=D.vehicles.filter(function(v){if(S.f&&(S.f==="sel"?!S.sel[v.p]:vkey(v,S.sel[v.p])!==S.f))return false;return!q||(v.p+v.b).toUpperCase().replace(/\s/g,"").indexOf(q)>=0});
   page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · '+D.vehicles.length+' од. · '+esc(D.date)+'</div><h2>Заявка '+S.type+'</h2>'+
    '<p class="note">'+(isTO?"Позначте авто, впишіть показник одометра. Олива й норма — з бази; для трансмісії вкажіть вузол.":"Позначте авто. Кількість дорівнює нормі доливу (10% об'єму з допустимим округленням) — можна зменшити.")+'</p></div>'+
-   '<div class="tools"><input type="search" id="q" placeholder="Пошук: номер або марка" value="'+esc(S.q)+'" style="flex:1 1 200px"><button type="button" id="addv" class="go">Додати ТЗ</button></div>'+
+   '<div class="sums" id="sum">'+sumHtml()+'</div><div class="tools"><input type="search" id="q" placeholder="Пошук: номер або марка" value="'+esc(S.q)+'" style="flex:1 1 200px"><button type="button" id="addv" class="go">Додати ТЗ</button></div>'+
    '<div class="list" id="list"></div><div class="foot" id="foot"></div>';
   var L=$("#list");
   if(!list.length)L.innerHTML='<p class="note">'+(D.vehicles.length?"Нічого не знайдено.":"За підрозділом «"+esc(D.unit)+"» авто не знайдено. Зверніться до служби ПММ.")+'</p>';
@@ -206,7 +215,7 @@ function drawForm(){
       if(!r||!r.ok){alertBox((r&&r.err)||"Помилка");return}window.open(r.url,"_blank")||(location.href=r.url)})
      .withFailureHandler(function(){b.disabled=false;b.textContent="Додати ТЗ";alertBox("Помилка зв'язку")}).portalAddSheet(T,PIN)};
   $("#q").oninput=function(e){S.q=e.target.value;var p=e.target.selectionStart;drawForm();var n=$("#q");n.focus();n.setSelectionRange(p,p)};
-  drawFoot()}
+  bindSum();drawFoot()}
 function vbody(v,s){var isTO=S.type==="ТО",b=document.createElement("div"),h="";b.className="vb";
   if(isTO){var last=v.e.km!=null?"крайнє ТО "+km(v.e.km)+", "+esc(v.e.d):"ТО не зареєстровано";
     h+='<div class="row"><span>Показник одометра</span><input type="text" inputmode="numeric" data-f="odo" value="'+esc(s.odo)+'" placeholder="'+(v.tab==="БТ"?"км / м/г":"км")+'" style="width:110px"><span class="note">'+last+'</span></div>'}
@@ -218,7 +227,7 @@ function vbody(v,s){var isTO=S.type==="ТО",b=document.createElement("div"),h="
   if(!s.sys.length)h+='<div class="err">У базі не зареєстровано об\'ємів систем — подайте заявку на це авто через бот текстом.</div>';
   b.innerHTML=h;
   b.querySelectorAll("[data-f]").forEach(function(inp){var f=inp.dataset.f,hnd=function(e){var t=e.target,i=t.dataset.i;
-    if(f==="own"){s.own=t.checked;drawForm();return}if(f==="in"){s.in=t.value;drawFoot();return}if(f==="id"){s.id=t.value;drawFoot();return}if(f==="odo"){s.odo=t.value;var pl=document.getElementById("pl-"+String(v.p).replace(/\W/g,""));if(pl){var q2=vehState(v,s.odo);pl.className="pill "+q2[1];pl.textContent=q2[0]}}else if(f==="on")s.sys[i].on=t.checked;else if(f==="oil")s.sys[i].oil=t.value;else if(f==="agg")s.sys[i].agg=t.value;else if(f==="qty")s.sys[i].qty=pnum(t.value);
+    if(f==="own"){s.own=t.checked;drawForm();return}if(f==="in"){s.in=t.value;drawFoot();return}if(f==="id"){s.id=t.value;drawFoot();return}if(f==="odo"){s.odo=t.value;refreshSum();var pl=document.getElementById("pl-"+String(v.p).replace(/\W/g,""));if(pl){var q2=vehState(v,s.odo);pl.className="pill "+q2[1];pl.textContent=q2[0]}}else if(f==="on")s.sys[i].on=t.checked;else if(f==="oil")s.sys[i].oil=t.value;else if(f==="agg")s.sys[i].agg=t.value;else if(f==="qty")s.sys[i].qty=pnum(t.value);
     if(f==="on")drawForm();else drawFoot()};
     if(f==="on"||f==="oil"||f==="own"||f==="id")inp.onchange=hnd;else inp.oninput=hnd});
   return b}
