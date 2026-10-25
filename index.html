@@ -185,7 +185,7 @@ function sysOf(v,type){var r=[],isTO=type==="ТО";
   if(v.t.v)r.push({id:"t",nm:"Трансмісія",oil:oils(v.t.o)[0]||"",opts:oils(v.t.o),norm:isTO?v.t.v:soNorm(v.t.v),on:!isTO,agg:isTO?"":"Трансмісія",qty:null});
   if(v.g.v)r.push({id:"g",nm:"ГУР",oil:(v.g.o||"ATF"),opts:[v.g.o||"ATF"],norm:isTO?v.g.v:soNorm(v.g.v),on:false,agg:"ГУР",qty:null});
   return r}
-function form(type){S={type:type,f:"",sel:{},place:"Центр",inv:{n:"",d:""},q:"",done:null};drawForm()}
+function form(type){S={type:type,f:"",sel:{},place:"Центр",inv:{n:"",d:""},q:"",done:null};var pv=(new URLSearchParams(location.search).get("v")||"").toUpperCase().replace(/\s/g,"");if(pv)D.vehicles.forEach(function(x){if(String(x.p).toUpperCase().replace(/\s/g,"")===pv)S.sel[x.p]={odo:"",sys:sysOf(x,type)}});drawForm()}
 function vehState(v,odo){var iv=interval(v);if(!iv)return["індивідуально","p-info"];if(v.e.km==null)return["ТО не зареєстровано","p-warn"];
   var o=pnum(odo);if(o!=null){var left=v.e.km+iv-o;return left<=0?["можна на ТО","p-ok"]:["ще зарано, залишилось "+km(left),"p-warn"]}return["ТО на "+km(v.e.km+iv)+(v.tab==="БТ"?" км / 250 м/г":" км"),"p-ok"]}
 function vkey(v,s){var iv=interval(v);if(!iv)return"ind";if(v.e.km==null)return"noreg";var o=pnum(s&&s.odo);if(o==null)return"wait";return v.e.km+iv-o<=0?"due":"early"}
