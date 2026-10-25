@@ -131,7 +131,7 @@ td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 var T=new URLSearchParams(location.search).get("t")||"";
 var EXEC="https://script.google.com/macros/s/AKfycbx-PdUTpFrYKk9pg-OxnF9tOaGm3zgWQ-OWLQtJ1nsqcuGSyAnM2d5VE37yFO7rbRXH/exec";
 function mkRun(){var ok=null,fail=null,o={withSuccessHandler:function(f){ok=f;return o},withFailureHandler:function(f){fail=f;return o}};
-  ["portalInfo","portalOpen","portalSubmit","portalAddSheet"].forEach(function(n){o[n]=function(){var args=[].slice.call(arguments);
+  ["portalInfo","portalOpen","portalSubmit","portalAddSheet","portalDoc"].forEach(function(n){o[n]=function(){var args=[].slice.call(arguments);
     fetch(EXEC,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({portal:true,fn:n,args:args})})
       .then(function(r){return r.json()}).then(function(j){if(j&&Object.prototype.hasOwnProperty.call(j,"r")){if(ok)ok(j.r)}else if(fail)fail(j)})
       .catch(function(e){if(fail)fail(e)})}});return o}
