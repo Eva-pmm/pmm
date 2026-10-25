@@ -252,6 +252,7 @@ function drawFoot(){var isTO=S.type==="ТО",n=Object.keys(S.sel).length,F=$("#f
   if(!$("#fb")){/* поля накладної створюються один раз і не перемальовуються — клавіатура не скидається */
     F.innerHTML='<div id="invrow">'+(isTO?'<div class="common"><span>Вкажіть № накладної на масляний фільтр (для всіх авто з моторною оливою)</span><input type="text" inputmode="numeric" id="invn" value="'+esc(S.inv.n)+'" style="width:90px"><span>від</span><input type="date" id="invd" value="'+esc(S.inv.d)+'"></div>':'')+'</div><div id="fb"></div>';
     if(isTO){$("#invn").oninput=function(e){S.inv.n=e.target.value;drawFoot()};$("#invd").oninput=$("#invd").onchange=function(e){S.inv.d=e.target.value;drawFoot()}}}
+  var needInv=isTO&&Object.keys(S.sel).some(function(p){var s=S.sel[p];return!s.own&&s.sys.some(function(x){return x.id==="e"&&x.on})});var ir=$("#invrow");if(ir)ir.style.display=needInv?"":"none";
   $("#fb").innerHTML='<div class="common"><span>Отримання</span><div class="seg">'+["Центр","Схід"].map(function(p){return'<button type="button" aria-pressed="'+(S.place===p)+'" data-p="'+p+'">'+p+'</button>'}).join("")+'</div></div>'+
    '<div class="tot">'+(n?Object.keys(T2).map(function(o){return'<span class="'+(bad.indexOf(o)>=0?"bad":"")+'">'+esc(o)+' – '+f1(T2[o])+' л</span>'}).join(""):'<span>Оберіть авто</span>')+'</div>'+
    (bad.length?'<div class="err">Загальна кількість кожної оливи має бути кратною 0,5 л.</div>':'')+
