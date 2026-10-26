@@ -313,15 +313,39 @@ function recon(){var A=D.vehicles.filter(function(v){return v.a}),by={};
    '<p class="note">Акт списання передайте діловоду служби ПММ; після внесення позначка знімається.</p>'}
 
 /* ---------- План ТО ---------- */
-function plan(){var R=D.vehicles.map(function(v){var iv=interval(v),nx=iv&&v.e.km!=null?v.e.km+iv:null;
-   var st=!iv?["індивідуально","p-info",3]:v.e.km==null?["ТО не зареєстровано","p-warn",1]:["за планом","p-ok",2];return{v:v,iv:iv,nx:nx,st:st}}).sort(function(a,b){return a.st[2]-b.st[2]||(a.nx||0)-(b.nx||0)});
-  function c(k){return R.filter(function(r){return r.st[2]===k}).length}
-  page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · моторна олива · '+esc(D.date)+'</div><h2>План ТО</h2>'+
-   '<p class="note">Крайнє зареєстроване ТО і пробіг, на якому настає наступне. Регламент: легкові, пікапи, буси — 10 000 км; великі буси — 15 000 км; вантажні, спецавто — 30 000 км; БТ — 1 000 км / 250 м/г.</p></div>'+
-   '<div class="sum"><div><b>'+c(2)+'</b><span>за планом</span></div><div><b>'+c(1)+'</b><span>ТО не зареєстровано</span></div><div><b>'+c(3)+'</b><span>індивідуально</span></div></div>'+
-   '<div class="tbl"><table><thead><tr><th>Номер</th><th>Марка</th><th>Крайнє ТО</th><th>Дата</th><th>Регламент</th><th>Наступне ТО</th><th>Стан</th></tr></thead><tbody>'+
-   R.map(function(r){return'<tr><td class="n">'+esc(r.v.p)+'</td><td>'+esc(r.v.b.length>28?r.v.b.slice(0,27)+"…":r.v.b)+'</td><td class="n">'+km(r.v.e.km)+'</td><td class="n">'+esc(r.v.e.d||"—")+'</td><td class="n">'+(r.iv?km(r.iv):"—")+'</td><td class="n"><b>'+km(r.nx)+'</b></td><td><span class="pill '+r.st[1]+'">'+r.st[0]+'</span></td></tr>'}).join("")+
-   '</tbody></table></div>'}
+var P=null,PR=[];
+function pst(v,odo){var iv=interval(v);
+if(!iv)return["ind","індивідуально","p-info"];
+if(v.e.km==null)return["noreg","перша видача — можна на ТО","p-ok"];
+var o=pnum(String(odo||"").replace(/\s/g,""));
+if(o==null)return["wait","введіть пробіг","p-info"];
+if(o<=v.e.km)return["bad","пробіг не більший за крайнє ТО","p-bad"];
+var d=o-v.e.km;
+if(d>=iv)return["due","можна на ТО","p-ok"];
+if(d>=iv*0.92)return["ok2","допустимо (не вистачає "+km(iv-d)+" км)","p-warn"];
+return["early","ще зарано, залишилось "+km(iv-d)+" км","p-bad"]}
+function pmatch(k,f){return!f||(f==="can"?(k==="due"||k==="ok2"||k==="noreg"):k===f)}
+var PT=[["","Усі","#f5c542"],["can","Можна на ТО","#39d353"],["early","Ще зарано","#ff5c5c"],["wait","Очікує показник","#6f9bff"],["noreg","ТО не зареєстровано","#ff9f1c"],["bad","Перевірити пробіг","#ff5c5c"],["ind","Індивідуально","#b18cff"]];
+function ptiles(){var c={"":PR.length,can:0,early:0,wait:0,noreg:0,bad:0,ind:0};
+PR.forEach(function(r){var k=pst(r.v,r.o)[0];if(k==="due"||k==="ok2"||k==="noreg")c.can++;if(c[k]!=null)c[k]++});
+return PT.filter(function(t){return t[0]===""||t[0]==="can"||c[t[0]]>0}).map(function(t){
+return'<button type="button" class="sm'+(P.f===t[0]?" act":"")+'" data-k="'+t[0]+'"><i style="background:'+t[2]+'"></i><b>'+c[t[0]]+'</b><span>'+t[1]+'</span></button>'}).join("")}
+function pbind(){Array.prototype.forEach.call(document.querySelectorAll("#psum .sm"),function(b){b.onclick=function(){P.f=b.getAttribute("data-k");pbody()}})}
+function pbody(){var q=P.q.trim().toUpperCase().replace(/\s/g,""),h="",n=0;
+PR.forEach(function(r,i){var s=pst(r.v,r.o);if(!pmatch(s[0],P.f))return;if(q&&(r.v.p+r.v.b).toUpperCase().replace(/\s/g,"").indexOf(q)<0)return;n++;
+h+='<tr data-i="'+i+'"><td class="n">'+esc(r.v.p)+'</td><td>'+esc(r.v.b.length>28?r.v.b.slice(0,27)+"…":r.v.b)+'</td><td class="n">'+km(r.v.e.km)+'</td><td class="n">'+esc(r.v.e.d||"—")+'</td><td class="n">'+(r.iv?km(r.iv):"—")+'</td><td class="n"><b>'+km(r.nx)+'</b></td>'+
+'<td><input type="text" inputmode="numeric" class="po" data-i="'+i+'" placeholder="'+(r.v.tab==="БТ"?"км / м/г":"км")+'" value="'+esc(r.o)+'" style="width:100px"></td><td><span class="pill '+s[2]+'">'+esc(s[1])+'</span></td></tr>'});
+$("#pb").innerHTML=h||'<tr><td colspan="8" class="note">Нічого не знайдено.</td></tr>';
+$("#psum").innerHTML=ptiles();pbind();
+Array.prototype.forEach.call(document.querySelectorAll("#pb .po"),function(inp){inp.oninput=function(e){var i=+inp.getAttribute("data-i"),r=PR[i];r.o=e.target.value;var s=pst(r.v,r.o),tr=inp.parentNode.parentNode,pl=tr.querySelector(".pill");pl.className="pill "+s[2];pl.textContent=s[1];$("#psum").innerHTML=ptiles();pbind()}})}
+function plan(){PR=D.vehicles.map(function(v){var iv=interval(v);return{v:v,iv:iv,nx:iv&&v.e.km!=null?v.e.km+iv:null,o:""}}).sort(function(a,b){
+function g(r){return!r.iv?3:r.v.e.km==null?1:2}return g(a)-g(b)||(a.nx||0)-(b.nx||0)});P={f:"",q:""};
+page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · моторна олива · '+esc(D.date)+'</div><h2>План ТО</h2>'+
+'<p class="note">Впишіть поточний показник одометра біля авто — стан оновиться одразу: «можна на ТО», «допустимо» (до −8% від регламенту) або «ще зарано, залишилось N км». Авто без зареєстрованого ТО — перша видача, можна на ТО. Регламент: легкові, пікапи, буси — 10 000 км; великі буси — 15 000 км; вантажні, спецавто — 30 000 км; БТ — 1 000 км / 250 м/г; трактори й екскаватори — індивідуально.</p></div>'+
+'<div class="sums" id="psum"></div><div class="tools"><input type="search" id="pq" placeholder="Пошук: номер або марка" style="flex:1 1 200px"></div>'+
+'<div class="tbl"><table><thead><tr><th>Номер</th><th>Марка</th><th>Крайнє ТО</th><th>Дата</th><th>Регламент</th><th>Наступне ТО</th><th>Поточний пробіг</th><th>Стан</th></tr></thead><tbody id="pb"></tbody></table></div>';
+$("#pq").oninput=function(e){P.q=e.target.value;pbody()};pbody()}
+
 })();
 
 </script>
