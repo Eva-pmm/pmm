@@ -316,7 +316,7 @@ function recon(){var A=D.vehicles.filter(function(v){return v.a}),by={};
 var P=null,PR=[];
 function pst(v,odo){var iv=interval(v);
 if(!iv)return["ind","індивідуально","p-info"];
-if(v.e.km==null)return["noreg","перша видача — можна на ТО","p-ok"];
+if(v.e.km==null)return["noreg","ТО не зареєстровано · перша видача","p-warn"];
 var o=pnum(String(odo||"").replace(/\s/g,""));
 if(o==null)return["wait","введіть пробіг","p-info"];
 if(o<=v.e.km)return["bad","пробіг не більший за крайнє ТО","p-bad"];
@@ -324,10 +324,10 @@ var d=o-v.e.km;
 if(d>=iv)return["due","можна на ТО","p-ok"];
 if(d>=iv*0.92)return["ok2","допустимо (не вистачає "+km(iv-d)+" км)","p-warn"];
 return["early","ще зарано, залишилось "+km(iv-d)+" км","p-bad"]}
-function pmatch(k,f){return!f||(f==="can"?(k==="due"||k==="ok2"||k==="noreg"):k===f)}
+function pmatch(k,f){return!f||(f==="can"?(k==="due"||k==="ok2"):k===f)}
 var PT=[["","Усі","#f5c542"],["can","Можна на ТО","#39d353"],["early","Ще зарано","#ff5c5c"],["wait","Очікує показник","#6f9bff"],["noreg","ТО не зареєстровано","#ff9f1c"],["bad","Перевірити пробіг","#ff5c5c"],["ind","Індивідуально","#b18cff"]];
 function ptiles(){var c={"":PR.length,can:0,early:0,wait:0,noreg:0,bad:0,ind:0};
-PR.forEach(function(r){var k=pst(r.v,r.o)[0];if(k==="due"||k==="ok2"||k==="noreg")c.can++;if(c[k]!=null)c[k]++});
+PR.forEach(function(r){var k=pst(r.v,r.o)[0];if(k==="due"||k==="ok2")c.can++;if(c[k]!=null)c[k]++});
 return PT.filter(function(t){return t[0]===""||t[0]==="can"||c[t[0]]>0}).map(function(t){
 return'<button type="button" class="sm'+(P.f===t[0]?" act":"")+'" data-k="'+t[0]+'"><i style="background:'+t[2]+'"></i><b>'+c[t[0]]+'</b><span>'+t[1]+'</span></button>'}).join("")}
 function pbind(){Array.prototype.forEach.call(document.querySelectorAll("#psum .sm"),function(b){b.onclick=function(){P.f=b.getAttribute("data-k");pbody()}})}
