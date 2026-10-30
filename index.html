@@ -145,7 +145,7 @@ function f1(n){return n==null?"—":(Math.round(n*100)/100).toString().replace("
 function km(n){return n==null?"—":String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," ")}
 function pnum(s){var n=parseFloat(String(s).replace(",","."));return isFinite(n)?n:null}
 function oils(o){return String(o||"").split("/").map(function(s){return s.trim().toUpperCase()}).filter(Boolean)}
-function interval(v){var k=(v.k||"").toLowerCase(),b=(v.b||"").toLowerCase();
+function interval(v){if(v.iv!=null)return v.iv||null;var k=(v.k||"").toLowerCase(),b=(v.b||"").toLowerCase();
   if(v.tab==="БТ")return 1000;
   if(/трактор|екскаватор|навантажувач|кран|бульдозер|грейдер/.test(k))return null;
   if(/master|daily|sprinter|touring|crafter/.test(b))return 15000;
@@ -228,12 +228,12 @@ function drawForm(){
   var list=D.vehicles.filter(function(v){if(S.f&&(S.f==="sel"?!S.sel[v.p]:S.f==="can"?(["due","noreg"].indexOf(vkey(v,S.sel[v.p]))<0):vkey(v,S.sel[v.p])!==S.f))return false;return!q||(v.p+v.b).toUpperCase().replace(/\s/g,"").indexOf(q)>=0});
   page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · '+D.vehicles.length+' од. · '+esc(D.date)+'</div><h2>Заявка '+S.type+'</h2>'+
    '<p class="note">'+(isTO?"Позначте авто, впишіть показник одометра. Олива й норма — з бази; для трансмісії вкажіть вузол.":"Позначте авто. Кількість дорівнює нормі доливу (10% об'єму з допустимим округленням) — можна зменшити.")+'</p></div>'+
-   '<button type="button" id="allb" style="width:100%;margin:6px 0 12px;padding:15px;border:1px solid #4cc27e;border-radius:14px;background:rgba(76,194,126,.18);color:#4cc27e;font:inherit;font-size:16px;font-weight:bold;cursor:pointer">Отримати моторну оливу на всі авто підрозділу</button>'+(S.info?'<div class="common" style="display:block;border-color:#4c8dff">'+esc(S.info)+' <button type="button" id="showw" class="go">Показати їх</button></div>':"")+(isTO?topInv():"")+'<div class="sums" id="sum">'+sumHtml()+'</div><div class="tools"><input type="search" id="q" placeholder="Пошук: номер або марка" value="'+esc(S.q)+'" style="flex:1 1 200px"><button type="button" id="addv" class="go">Додати ТЗ</button></div>'+
+   '<button type="button" id="allb" style="width:100%;margin:6px 0 12px;padding:15px;border:1px solid #4cc27e;border-radius:14px;background:rgba(76,194,126,.18);color:#4cc27e;font:inherit;font-size:16px;font-weight:bold;cursor:pointer">Отримати моторну оливу на всі авто підрозділу</button>'+(S.info?'<div class="common" style="display:block;border-color:#4c8dff">'+esc(S.info)+' <button type="button" id="showw" class="go">Показати їх</button></div>':"")+(isTO?topInv():"")+'<div class="sums" id="sum">'+sumHtml()+'</div><div class="tools"><input type="search" id="q" placeholder="Пошук: номер або марка" value="'+esc(S.q)+'" style="flex:1 1 200px"><button type="button" id="addv" style="display:none" class="go">Додати ТЗ</button></div>'+
    '<div class="list" id="list"></div><div class="foot" id="foot"></div>';
   var L=$("#list");if(isTO)bindInv();var ab=$("#allb");if(ab)ab.onclick=function(){allSel(S.type)};var sw=$("#showw");if(sw)sw.onclick=function(){S.f="wait";drawForm()};
   if(!list.length)L.innerHTML='<p class="note">'+(D.vehicles.length?"Нічого не знайдено.":"За підрозділом «"+esc(D.unit)+"» авто не знайдено. Зверніться до служби ПММ.")+'</p>';
   list.forEach(function(v){var s=S.sel[v.p],st=vehState(v,s&&s.odo),el=document.createElement("div");el.className="veh"+(s?" on":"");
-    el.innerHTML='<label class="vh"><input type="checkbox" '+(s?"checked":"")+'><div class="vt"><b>'+esc(v.p)+'</b><span>'+esc(v.b)+(v.k?" · "+esc(v.k):"")+'</span></div>'+(isTO?'<span class="pill '+st[1]+'" id="pl-'+esc(v.p).replace(/\W/g,"")+'">'+st[0]+'</span>':'')+(v.a?'<span class="pill p-warn">очікує акт</span>':'')+'</label>';
+    el.innerHTML='<label class="vh"><input type="checkbox" '+(s?"checked":"")+'><div class="vt"><b>'+esc(v.p)+'</b><span>'+esc(v.b)+(v.ivl?" · "+esc(v.ivl):(v.k?" · "+esc(v.k):""))+'</span></div>'+(isTO?'<span class="pill '+st[1]+'" id="pl-'+esc(v.p).replace(/\W/g,"")+'">'+st[0]+'</span>':'')+(v.a?'<span class="pill p-warn">очікує акт</span>':'')+'</label>';
     el.querySelector("input").onchange=function(e){if(e.target.checked)S.sel[v.p]={odo:"",sys:sysOf(v,S.type)};else delete S.sel[v.p];drawForm()};
     if(s)el.appendChild(vbody(v,s));L.appendChild(el)});
   $("#addv").onclick=function(){var b=this;b.disabled=true;b.textContent="Створюю таблицю…";
