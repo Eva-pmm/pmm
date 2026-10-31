@@ -112,6 +112,12 @@ td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .page{padding:0;min-height:0}
 .foot{margin:0;border-radius:12px;border:1px solid var(--line)}
 [hidden]{display:none!important}
+/* панель служби: вкладки підрозділів */
+.ptabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.ptabs button{flex:none;display:flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:999px;padding:7px 12px;font:600 13px var(--f-body);cursor:pointer;white-space:nowrap}
+.ptabs button b{font-family:var(--f-mono);color:var(--muted)}
+.ptabs button[aria-selected=true]{border-color:#f5c542;background:rgba(245,197,66,.16);color:var(--title)}
+.ptabs button[aria-selected=true] b{color:var(--title)}
 </style>
 </head><body>
 <div class="wrap">
@@ -166,7 +172,7 @@ $("#gform").onsubmit=function(e){e.preventDefault();var p=$("#pin").value.trim()
   google.script.run.withSuccessHandler(function(r){$("#gbtn").disabled=false;
     if(!r||!r.ok){$("#gerr").textContent=(r&&r.err)||"Помилка";if(!(r&&r.bad)){$("#pin").hidden=true;$("#gbtn").hidden=true}return}
     PIN=p;D=r;$("#gate").hidden=true;page.hidden=false;if(r.mode==="result"){showResult(r);return}
-    ({"то":function(){start("ТО")},"со":function(){start("СО")},"звірка":recon,"план":plan})[r.kind]();
+    ({"то":function(){start("ТО")},"со":function(){start("СО")},"звірка":recon,"план":plan,"служба":panel})[r.kind]();
   }).withFailureHandler(function(){$("#gbtn").disabled=false;$("#gerr").textContent="Помилка зв'язку, спробуйте ще раз"}).portalOpen(T,p)};
 
 function showResult(r){var bs="padding:12px 24px;border:1px solid #4c8dff;border-radius:999px;background:rgba(76,141,255,.16);color:#4c8dff;font-size:15px;font-weight:bold";
@@ -311,6 +317,22 @@ function recon(){var A=D.vehicles.filter(function(v){return v.a}),by={};
    '<div class="list">'+(A.length?A.map(function(v){return'<div class="akt"><div class="row" style="justify-content:space-between"><b>'+esc(v.p)+'</b><span class="pill p-warn">очікує акт</span></div><span>'+esc(v.b)+'</span>'+
      '<span class="note">Заявка №'+esc(v.a.n)+' · погоджено '+esc(v.a.d)+(v.a.items.length?' · '+v.a.items.map(function(i){return esc(i.o)+" — "+f1(i.q)+" л ("+i.s.toLowerCase()+")"}).join(", "):"")+'</span></div>'}).join(""):'<p class="note">Несписаних видач немає.</p>')+'</div>'+
    '<p class="note">Акт списання передайте діловоду служби ПММ; після внесення позначка знімається.</p>'}
+
+/* ---------- Панель служби (Брюс, Перс): вкладки підрозділів з аркуша «МВО» ---------- */
+var PN=null;
+function panel(){var all=D.vehicles,units=D.units||[],root=page;PN={tab:-1,view:"план"};
+  function listOf(i){return i<0?all:all.filter(function(v){return(v.ut||[]).indexOf(i)>=0})}
+  function draw(){var tabs=[{i:-1,l:"Усі підрозділи"}].concat(units.map(function(u,i){return{i:i,l:u.u+(u.who&&u.who.length?" · "+u.who.join(", "):"")}}));
+    root.innerHTML='<div class="ph"><div class="eyebrow">Служба ПММ · контроль підрозділів · '+esc(D.date)+'</div><h2>Панель служби</h2></div>'+
+     '<div class="ptabs" role="tablist">'+tabs.map(function(t){var L=listOf(t.i),a=L.filter(function(v){return v.a}).length;
+       return'<button type="button" role="tab" aria-selected="'+(PN.tab===t.i)+'" data-t="'+t.i+'">'+esc(t.l)+' <b>'+L.length+'</b>'+(a?'<span class="pill p-warn">акт '+a+'</span>':'')+'</button>'}).join("")+'</div>'+
+     '<div class="seg" style="align-self:flex-start">'+[["план","План ТО"],["звірка","Звірка"]].map(function(k){return'<button type="button" data-v="'+k[0]+'" aria-pressed="'+(PN.view===k[0])+'">'+k[1]+'</button>'}).join("")+'</div><div id="psub" style="display:flex;flex-direction:column;gap:14px"></div>';
+    Array.prototype.forEach.call(root.querySelectorAll("[data-t]"),function(b){b.onclick=function(){PN.tab=+b.getAttribute("data-t");draw()}});
+    Array.prototype.forEach.call(root.querySelectorAll("[data-v]"),function(b){b.onclick=function(){PN.view=b.getAttribute("data-v");draw()}});
+    var t=tabs.filter(function(x){return x.i===PN.tab})[0];D.vehicles=listOf(PN.tab);D.unit=t.l;
+    var sel=root.querySelector('[aria-selected="true"]');if(sel&&sel.scrollIntoView)sel.scrollIntoView({block:"nearest",inline:"center"});
+    page=$("#psub");try{(PN.view==="план"?plan:recon)()}finally{page=root}}
+  draw()}
 
 /* ---------- План ТО ---------- */
 var P=null,PR=[];
