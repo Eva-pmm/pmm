@@ -326,14 +326,53 @@ function panel(){var all=D.vehicles,units=D.units||[],root=page;PN={tab:-1,view:
     root.innerHTML='<div class="ph"><div class="eyebrow">Служба ПММ · контроль підрозділів · '+esc(D.date)+'</div><h2>Панель служби</h2></div>'+
      '<div class="ptabs" role="tablist">'+tabs.map(function(t){var L=listOf(t.i),a=L.filter(function(v){return v.a}).length;
        return'<button type="button" role="tab" aria-selected="'+(PN.tab===t.i)+'" data-t="'+t.i+'">'+esc(t.l)+' <b>'+L.length+'</b>'+(a?'<span class="pill p-warn">акт '+a+'</span>':'')+'</button>'}).join("")+'</div>'+
-     '<div class="seg" style="align-self:flex-start">'+[["план","План ТО"],["звірка","Звірка"]].map(function(k){return'<button type="button" data-v="'+k[0]+'" aria-pressed="'+(PN.view===k[0])+'">'+k[1]+'</button>'}).join("")+'</div><div id="psub" style="display:flex;flex-direction:column;gap:14px"></div>';
+     '<div class="seg" style="align-self:flex-start">'+[["план","План ТО"],["звірка","Звірка"],["списання","Списання"]].map(function(k){return'<button type="button" data-v="'+k[0]+'" aria-pressed="'+(PN.view===k[0])+'">'+k[1]+'</button>'}).join("")+'</div><div id="psub" style="display:flex;flex-direction:column;gap:14px"></div>';
     Array.prototype.forEach.call(root.querySelectorAll("[data-t]"),function(b){b.onclick=function(){PN.tab=+b.getAttribute("data-t");draw()}});
     Array.prototype.forEach.call(root.querySelectorAll("[data-v]"),function(b){b.onclick=function(){PN.view=b.getAttribute("data-v");draw()}});
     var t=tabs.filter(function(x){return x.i===PN.tab})[0];D.vehicles=listOf(PN.tab);D.unit=t.l;
     var sel=root.querySelector('[aria-selected="true"]');if(sel&&sel.scrollIntoView)sel.scrollIntoView({block:"nearest",inline:"center"});
-    page=$("#psub");try{(PN.view==="план"?plan:recon)()}finally{page=root}}
+    page=$("#psub");try{(PN.view==="план"?plan:PN.view==="списання"?wo:recon)()}finally{page=root}}
   draw()}
 
+
+/* ---------- Списання (панель служби): несписані авто, несписана олива, видано / списано по періодах ---------- */
+var W={f:"wait",per:"m",q:""};
+var WMON=["січень","лютий","березень","квітень","травень","червень","липень","серпень","вересень","жовтень","листопад","грудень"];
+function wlab(k){var p=k.split("-");return p.length===2?WMON[+p[1]-1]+" "+p[0]:"тиждень від "+p[2]+"."+p[1]}
+function wo(){pcss();wcss();var L=(D.wo||[]).filter(function(l){return PN.tab<0||(l.ut||[]).indexOf(PN.tab)>=0});
+  var wait=L.filter(function(l){return!l.w}),done=L.filter(function(l){return l.w});
+  function sum(a){return a.reduce(function(s,l){return s+(+l.q||0)},0)}
+  var oldest=wait.reduce(function(m,l){return Math.max(m,l.days||0)},0),oils={};
+  L.forEach(function(l){Object.keys(l.o||{}).forEach(function(o){var x=oils[o]=oils[o]||[0,0];x[l.w?1:0]+=+l.o[o]||0})});
+  var oh=Object.keys(oils).sort(function(a,b){return oils[b][0]-oils[a][0]||(a<b?-1:1)}).map(function(o){var x=oils[o];
+    return'<div class="wr"><span class="wn">'+esc(o)+'</span><span class="wv'+(x[0]>0?' wbad':'')+'">'+f1(x[0])+' л</span><span class="wv wok">'+f1(x[1])+' л</span></div>'}).join("");
+  var per={};L.forEach(function(l){var a=W.per==="m"?l.ak:l.aw;if(a){per[a]=per[a]||[0,0];per[a][0]+=+l.q||0}
+    if(l.w){var d=W.per==="m"?l.dk:l.dw;if(d){per[d]=per[d]||[0,0];per[d][1]+=+l.q||0}}});
+  var pk=Object.keys(per).sort().reverse().slice(0,W.per==="m"?12:8),mx=pk.reduce(function(m,k){return Math.max(m,per[k][0],per[k][1])},0)||1;
+  var ph=pk.map(function(k){var x=per[k];return'<div class="wp"><span class="wn">'+esc(wlab(k))+'</span><div class="wb"><i style="width:'+Math.round(x[0]/mx*100)+'%;background:var(--warn)"></i><i style="width:'+Math.round(x[1]/mx*100)+'%;background:var(--ok)"></i></div><span class="wv">'+f1(x[0])+' / <span class="wok">'+f1(x[1])+'</span> л</span></div>'}).join("");
+  page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · списання ПММ · '+esc(D.date)+'</div><h2>Списання</h2>'+
+   '<p class="note">Несписано — заявку погоджено, акту списання ще немає. Списано — служба внесла № і дату акту в «Заявки» (стовпець «Акт»). Тестові заявки не враховано.</p></div>'+
+   '<div class="sums"><div class="sm"><i style="background:var(--bad)"></i><b>'+wait.length+'</b><span>авто без акту</span></div>'+
+   '<div class="sm"><i style="background:var(--warn)"></i><b>'+f1(sum(wait))+'</b><span>л несписано</span></div>'+
+   '<div class="sm"><i style="background:var(--bad)"></i><b>'+oldest+'</b><span>днів — найдовше без акту</span></div>'+
+   '<div class="sm"><i style="background:var(--ok)"></i><b>'+f1(sum(done))+'</b><span>л списано ('+done.length+' авто)</span></div></div>'+
+   '<div class="wgrid"><div class="pc"><div class="pt"><b>Оливи</b><span class="note">несписано · <span class="wok">списано</span></span></div>'+(oh||'<p class="note">Видач немає.</p>')+'</div>'+
+   '<div class="pc"><div class="pt"><b>По періодах</b><div class="seg">'+[["m","Місяць"],["w","Тиждень"]].map(function(k){return'<button type="button" data-wp="'+k[0]+'" aria-pressed="'+(W.per===k[0])+'">'+k[1]+'</button>'}).join("")+'</div></div>'+
+   '<p class="note"><span style="color:var(--warn)">■</span> видано (за датою погодження) · <span class="wok">■</span> списано (за датою акту)</p>'+(ph||'<p class="note">Даних немає.</p>')+'</div></div>'+
+   '<div class="sums" id="wsum"></div><div class="tools"><input type="search" id="wq" placeholder="Пошук: номер, марка, заявка" style="flex:1 1 200px" value="'+esc(W.q)+'"></div><div class="plist" id="wb"></div>';
+  Array.prototype.forEach.call(page.querySelectorAll("[data-wp]"),function(b){b.onclick=function(){W.per=b.getAttribute("data-wp");wo()}});
+  function body(){var q=W.q.trim().toUpperCase().replace(/\s/g,""),c={wait:wait.length,done:done.length,"":L.length};
+    $("#wsum").innerHTML=[["wait","без акту","var(--bad)"],["done","списано","var(--ok)"],["","усі","#f5c542"]].map(function(t){return'<button type="button" class="sm'+(W.f===t[0]?" act":"")+'" data-wf="'+t[0]+'"><i style="background:'+t[2]+'"></i><b>'+c[t[0]]+'</b><span>'+t[1]+'</span></button>'}).join("");
+    Array.prototype.forEach.call(document.querySelectorAll("[data-wf]"),function(b){b.onclick=function(){W.f=b.getAttribute("data-wf");body()}});
+    var A=(W.f==="wait"?wait:W.f==="done"?done:L).slice().sort(function(a,b){return(a.w-b.w)||((b.days||0)-(a.days||0))||(a.p<b.p?-1:1)}),h="";
+    A.forEach(function(l){if(q&&(l.p+l.b+l.n).toUpperCase().replace(/\s/g,"").indexOf(q)<0)return;
+      var s=l.w?["списано "+(l.dd||""),"p-ok"]:l.days>=14?["без акту "+l.days+" дн.","p-bad"]:l.days>=7?["без акту "+l.days+" дн.","p-warn"]:["без акту "+l.days+" дн.","p-info"];
+      h+='<div class="pc"><div class="pt"><b>'+esc(l.p)+'</b><span class="pill '+s[1]+'">'+esc(s[0])+'</span></div><div class="pb2">'+esc(l.b)+(PN.tab<0&&l.u?' · '+esc(l.u):'')+'</div>'+
+       '<div class="pm"><span>Заявка <b>'+esc(l.n)+'</b> ('+esc(l.t)+')</span><span>Погоджено: <b>'+esc(l.ad)+'</b></span>'+(l.w?'<span>Акт: <b>'+esc(l.act)+'</b></span>':'')+'</div>'+
+       '<div class="pm">'+Object.keys(l.o||{}).map(function(o){return'<span>'+esc(o)+': <b>'+f1(l.o[o])+' л</b></span>'}).join("")+'<span>Всього: <b>'+f1(l.q)+' л</b></span></div></div>'});
+    $("#wb").innerHTML=h||'<p class="note">Нічого не знайдено.</p>'}
+  $("#wq").oninput=function(e){W.q=e.target.value;body()};body()}
+function wcss(){if(document.getElementById("wcss"))return;var st=document.createElement("style");st.id="wcss";st.textContent=".wgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px}.wr,.wp{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;font-size:13.5px;padding:4px 0;border-top:1px dashed var(--line)}.wp{grid-template-columns:120px minmax(60px,1fr) auto}.wn{overflow-wrap:anywhere}.wv{font-family:var(--f-mono);text-align:right;white-space:nowrap}.wbad{color:var(--warn);font-weight:600}.wok{color:var(--ok)}.wb{display:flex;flex-direction:column;gap:3px}.wb i{display:block;height:6px;border-radius:3px;min-width:2px}";document.head.appendChild(st)}
 /* ---------- План ТО ---------- */
 var P=null,PR=[];
 function pst(v,odo){var iv=interval(v);
