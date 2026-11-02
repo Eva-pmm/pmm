@@ -338,8 +338,8 @@ function panel(){var all=D.vehicles,units=D.units||[],root=page;PN={tab:-1,view:
 var P=null,PR=[];
 function pst(v,odo){var iv=interval(v);
 if(!iv)return["ind","індивідуально","p-info"];
-if(v.e.km==null)return["noreg","ТО не зареєстровано · перша видача","p-warn"];
 var o=pnum(String(odo||"").replace(/\s/g,""));
+if(v.e.km==null)return o==null?["noreg","ТО не зареєстровано · перша видача","p-warn"]:["due","перша видача · можна на ТО з показником "+km(o)+" км","p-ok"];
 if(o==null)return["wait","введіть пробіг","p-info"];
 if(o<=v.e.km)return["bad","пробіг не більший за крайнє ТО","p-bad"];
 var d=o-v.e.km;
