@@ -192,8 +192,8 @@ function showResult(r){var bs="padding:12px 24px;border:1px solid #4c8dff;border
     .withFailureHandler(function(){b.disabled=false;$("#dle").textContent="Помилка, спробуйте ще раз"}).portalDoc(T,PIN)}}
 /* ---------- ТО / СО ---------- */
 function sysOf(v,type){var r=[],isTO=type==="ТО";
-  if(v.e.v)r.push({id:"e",nm:"Двигун",oil:oils(v.e.o)[0]||"",opts:oils(v.e.o),norm:isTO?v.e.v:soNorm(v.e.v),on:true,agg:"Двигун",qty:null});
-  if(v.t.v)r.push({id:"t",nm:"Трансмісія",oil:oils(v.t.o)[0]||"",opts:oils(v.t.o),norm:isTO?v.t.v:soNorm(v.t.v),on:!isTO,agg:isTO?"":"Трансмісія",qty:null});
+  if(v.e.v)r.push({id:"e",nm:"Двигун",oil:oils(v.e.o)[0]||"",opts:oils(v.e.o),free:!oils(v.e.o).length,norm:isTO?v.e.v:soNorm(v.e.v),on:true,agg:"Двигун",qty:null});
+  if(v.t.v)r.push({id:"t",nm:"Трансмісія",oil:oils(v.t.o)[0]||"",opts:oils(v.t.o),free:!oils(v.t.o).length,norm:isTO?v.t.v:soNorm(v.t.v),on:!isTO,agg:isTO?"":"Трансмісія",qty:null});
   if(v.g.v)r.push({id:"g",nm:"ГУР",oil:(v.g.o||"ATF"),opts:[v.g.o||"ATF"],norm:isTO?v.g.v:soNorm(v.g.v),on:false,agg:"ГУР",qty:null});
   return r}
 function allSel(type){var skip=0;D.vehicles.forEach(function(x){if(type==="СО"||vkey(x,null)==="noreg")S.sel[x.p]={odo:"",sys:sysOf(x,type).map(function(q){if(q.id!=="e")q.on=false;return q})};else if(vkey(x,null)!=="ind")skip++});var ns=Object.keys(S.sel).length;if(type==="ТО"){S.f=ns?"sel":"wait";S.info=(ns?"Позначено "+ns+" авто, на які можна отримати моторну оливу зараз (ТО ще не реєструвалось; трансмісія й інші системи — через «Отримати на вибір»). Що робити: 1) впишіть показник одометра біля кожного авто; 2) вкажіть накладну на фільтр — одну на всі авто (нижче) або окрему для групи; 3) натисніть «Подати заявку». ":"Усі авто підрозділу мають зареєстроване ТО. Позначте потрібне авто і впишіть показник одометра — система одразу покаже, чи можна на ТО. ")+(skip?"Ще "+skip+" авто мають зареєстроване ТО — їх можна додати вручну (кнопка «Показати їх»).":"")}else S.info="Позначено всю техніку підрозділу ("+ns+" од.), лише моторна олива (трансмісія й інші системи — через «Отримати на вибір»). Кількість оливи дорівнює нормі доливу — її можна зменшити. Перевірте і натисніть «Подати заявку».";drawForm()}
@@ -253,12 +253,12 @@ function vbody(v,s){var isTO=S.type==="ТО",b=document.createElement("div"),h="
   if(false&&isTO&&s.sys.some(function(x){return x.id==="e"&&x.on}))h+='<div class="row"><label><input type="checkbox" data-f="own" '+(s.own?"checked":"")+'> Інша накладна для цього авто (лише якщо не підходить загальна)</label>'+(s.own?'<input type="text" inputmode="numeric" data-f="in" value="'+esc(s.in||"")+'" placeholder="№" style="width:90px"><input type="date" data-f="id" value="'+esc(s.id||"")+'">':'')+'</div>';
   s.sys.forEach(function(x,i){h+='<div class="sys"><input type="checkbox" data-i="'+i+'" data-f="on" '+(x.on?"checked":"")+' aria-label="'+x.nm+'">'+
     '<div class="nm">'+x.nm+(isTO&&x.id==="t"?' <input type="text" data-i="'+i+'" data-f="agg" value="'+esc(x.agg)+'" placeholder="вузол: КПП, задній міст…" style="width:170px">':'')+'<small>норма '+f1(x.norm)+' л'+(isTO?" (+0,5)":"")+'</small></div>'+
-    (x.opts.length>1?'<select data-i="'+i+'" data-f="oil">'+x.opts.map(function(o){return'<option '+(o===x.oil?"selected":"")+'>'+esc(o)+'</option>'}).join("")+'</select>':'<span class="oil">'+esc(x.oil||"—")+'</span>')+
+    (x.free?'<input type="text" data-i="'+i+'" data-f="oilt" value="'+esc(x.oil)+'" placeholder="олива, напр. 5W30" title="У базі ПММ не зареєстровано тип оливи — впишіть його" style="width:130px;border-color:var(--warn)">':x.opts.length>1?'<select data-i="'+i+'" data-f="oil">'+x.opts.map(function(o){return'<option '+(o===x.oil?"selected":"")+'>'+esc(o)+'</option>'}).join("")+'</select>':'<span class="oil">'+esc(x.oil||"—")+'</span>')+
     '<input type="number" step="0.1" min="0" data-i="'+i+'" data-f="qty" value="'+(x.qty!=null?x.qty:x.norm)+'" aria-label="літрів"></div>'});
   if(!s.sys.length)h+='<div class="err">У базі не зареєстровано об\'ємів систем — подайте заявку на це авто через бот текстом.</div>';
   b.innerHTML=h;
   b.querySelectorAll("[data-f]").forEach(function(inp){var f=inp.dataset.f,hnd=function(e){var t=e.target,i=t.dataset.i;
-    if(f==="own"){s.own=t.checked;drawForm();return}if(f==="in"){s.in=t.value;drawFoot();return}if(f==="id"){s.id=t.value;drawFoot();return}if(f==="odo"){s.odo=t.value;refreshSum();var pl=document.getElementById("pl-"+String(v.p).replace(/\W/g,""));if(pl){var q2=vehState(v,s.odo);pl.className="pill "+q2[1];pl.textContent=q2[0]}}else if(f==="on")s.sys[i].on=t.checked;else if(f==="oil")s.sys[i].oil=t.value;else if(f==="agg")s.sys[i].agg=t.value;else if(f==="qty")s.sys[i].qty=pnum(t.value);
+    if(f==="own"){s.own=t.checked;drawForm();return}if(f==="in"){s.in=t.value;drawFoot();return}if(f==="id"){s.id=t.value;drawFoot();return}if(f==="odo"){s.odo=t.value;refreshSum();var pl=document.getElementById("pl-"+String(v.p).replace(/\W/g,""));if(pl){var q2=vehState(v,s.odo);pl.className="pill "+q2[1];pl.textContent=q2[0]}}else if(f==="on")s.sys[i].on=t.checked;else if(f==="oil")s.sys[i].oil=t.value;else if(f==="oilt")s.sys[i].oil=t.value.replace(/\s+/g," ").trim().toUpperCase();else if(f==="agg")s.sys[i].agg=t.value;else if(f==="qty")s.sys[i].qty=pnum(t.value);
     if(f==="on")drawForm();else drawFoot()};
     if(f==="on"||f==="oil"||f==="own"||f==="id")inp.onchange=hnd;else inp.oninput=hnd});
   return b}
@@ -270,7 +270,7 @@ function problems(){var isTO=S.type==="ТО",out=[],motor=false;
       if(o==null)out.push(p+": вкажіть показник одометра");
       else if(v.e.km!=null&&on.some(function(x){return x.id==="e"})){var iv=interval(v);if(o<=v.e.km)out.push(p+": пробіг менший за крайнє ТО ("+km(v.e.km)+")");
         else if(iv&&o-v.e.km<iv*0.92)out.push(p+": від крайнього ТО "+km(o-v.e.km)+", регламент "+km(iv))}}
-    on.forEach(function(x){var q=qOf(x);if(q==null||q<=0)out.push(p+" · "+x.nm+": вкажіть кількість");
+    on.forEach(function(x){var q=qOf(x);if(!String(x.oil||"").trim())out.push(p+" · "+x.nm+": у базі ПММ не зареєстровано тип оливи — впишіть його");if(q==null||q<=0)out.push(p+" · "+x.nm+": вкажіть кількість");
       else if(q>x.norm+(isTO?0.5:0)+1e-9)out.push(p+" · "+x.nm+": "+f1(q)+" л понад норму "+f1(x.norm)+" л");
       if(isTO&&x.id==="t"&&!String(x.agg).trim())out.push(p+": для трансмісії вкажіть вузол");
       if(x.id==="e")motor=true})});
