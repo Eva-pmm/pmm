@@ -208,7 +208,8 @@ function start(type){var n=D.vehicles.length;
   items.forEach(function(it){var b=document.createElement("button");b.type="button";
     b.style.cssText="text-align:left;padding:16px 18px;border:1px solid "+it[2]+";border-radius:14px;background:"+it[2]+"26;color:"+(it[3]?it[2]:"#9aa0a6")+";font:inherit;cursor:"+(it[3]?"pointer":"not-allowed")+";opacity:"+(it[3]?"1":".6");
     b.innerHTML='<b style="font-size:17px">'+it[0]+'</b><br><span style="font-size:13px;opacity:.85">'+it[1]+'</span>';
-    if(it[3])b.onclick=it[3];else b.disabled=true;$("#st").appendChild(b)})}
+    if(it[3])b.onclick=it[3];else b.disabled=true;$("#st").appendChild(b)});
+  $("#st").appendChild(xlBtn(D.vehicles,D.unit))}
 function form(type){S={type:type,f:"",sel:{},place:"Центр",inv:{n:"",d:""},q:"",done:null};if(D.single)D.vehicles.forEach(function(x){S.sel[x.p]={odo:"",sys:sysOf(x,type)}});drawForm()}
 function vehState(v,odo){var iv=interval(v);if(!iv)return["індивідуально","p-info"];if(v.e.km==null)return["ТО не зареєстровано","p-warn"];
   var o=pnum(odo);if(o!=null){var left=v.e.km+iv-o;return left<=0?["можна на ТО","p-ok"]:["ще зарано, залишилось "+km(left),"p-warn"]}return["ТО на "+km(v.e.km+iv)+(v.tab==="БТ"?" км / 250 м/г":" км"),"p-ok"]}
@@ -327,10 +328,10 @@ function panel(){var all=D.vehicles,units=D.units||[],root=page;PN={tab:-1,view:
     root.innerHTML='<div class="ph"><div class="eyebrow">Служба ПММ · контроль підрозділів · '+esc(D.date)+'</div><h2>Панель служби</h2></div>'+
      '<div class="ptabs" role="tablist">'+tabs.map(function(t){var L=listOf(t.i),a=L.filter(function(v){return v.a}).length;
        return'<button type="button" role="tab" aria-selected="'+(PN.tab===t.i)+'" data-t="'+t.i+'">'+esc(t.l)+' <b>'+L.length+'</b>'+(a?'<span class="pill p-warn">акт '+a+'</span>':'')+'</button>'}).join("")+'</div>'+
-     '<div class="seg" style="align-self:flex-start">'+[["план","План ТО"],["звірка","Звірка"],["списання","Списання"]].map(function(k){return'<button type="button" data-v="'+k[0]+'" aria-pressed="'+(PN.view===k[0])+'">'+k[1]+'</button>'}).join("")+'</div><div id="psub" style="display:flex;flex-direction:column;gap:14px"></div>';
+     '<div class="seg" style="align-self:flex-start">'+[["план","План ТО"],["звірка","Звірка"],["списання","Списання"]].map(function(k){return'<button type="button" data-v="'+k[0]+'" aria-pressed="'+(PN.view===k[0])+'">'+k[1]+'</button>'}).join("")+'</div><div id="pxl" style="max-width:560px"></div><div id="psub" style="display:flex;flex-direction:column;gap:14px"></div>';
     Array.prototype.forEach.call(root.querySelectorAll("[data-t]"),function(b){b.onclick=function(){PN.tab=+b.getAttribute("data-t");draw()}});
     Array.prototype.forEach.call(root.querySelectorAll("[data-v]"),function(b){b.onclick=function(){PN.view=b.getAttribute("data-v");draw()}});
-    var t=tabs.filter(function(x){return x.i===PN.tab})[0];D.vehicles=listOf(PN.tab);D.unit=t.l;
+    var t=tabs.filter(function(x){return x.i===PN.tab})[0];D.vehicles=listOf(PN.tab);D.unit=t.l;$("#pxl").appendChild(xlBtn(D.vehicles,PN.tab<0?"Усі підрозділи":units[PN.tab].u));
     var sel=root.querySelector('[aria-selected="true"]');if(sel&&sel.scrollIntoView)sel.scrollIntoView({block:"nearest",inline:"center"});
     page=$("#psub");try{(PN.view==="план"?plan:PN.view==="списання"?wo:recon)()}finally{page=root}}
   draw()}
@@ -416,6 +417,55 @@ page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · мото
 '<div class="plist" id="pb"></div>';
 $("#pq").oninput=function(e){P.q=e.target.value;pbody()};pbody()}
 
+/* ---------- Завантажити список техніки (Excel), 04.11.2026: сортування — серія номера, далі число (ВІ 111 → ВІ 112 → НІ 211), БТ — за числом ---------- */
+var UA_AB="АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ";
+function plateKey(v){var s=String(v.p||"").toUpperCase().replace(/\s+/g,""),m=s.match(/^([^\d]*)(\d*)(.*)$/)||["",s,"",""];
+  return{bt:v.tab==="БТ"?1:0,pre:m[1],num:m[2]?parseInt(m[2],10):Infinity,dig:m[2],rest:m[3],raw:s}}
+function preCmp(a,b){for(var i=0;i<Math.max(a.length,b.length);i++){var x=a[i],y=b[i];if(x===y)continue;if(x==null)return-1;if(y==null)return 1;
+  var ix=UA_AB.indexOf(x),iy=UA_AB.indexOf(y);if(ix<0)ix=100+x.charCodeAt(0);if(iy<0)iy=100+y.charCodeAt(0);return ix-iy}return 0}
+function plateCmp(a,b){var A=plateKey(a),B=plateKey(b);
+  if(A.bt!==B.bt)return A.bt-B.bt;
+  if(!A.bt){var c=preCmp(A.pre,B.pre);if(c)return c}
+  if(A.num!==B.num)return A.num<B.num?-1:1;
+  return A.rest<B.rest?-1:A.rest>B.rest?1:(A.raw<B.raw?-1:A.raw>B.raw?1:0)}
+var CRCT=(function(){var t=[],c,n,k;for(n=0;n<256;n++){c=n;for(k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(u){var c=0xFFFFFFFF;for(var i=0;i<u.length;i++)c=CRCT[(c^u[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0}
+function u8(s){return new TextEncoder().encode(s)}
+function zipStore(files){var parts=[],cd=[],off=0;
+  function le(n,b){var a=[];for(var i=0;i<b;i++){a.push(n&255);n=Math.floor(n/256)}return a}
+  files.forEach(function(f){var nm=u8(f.n),d=u8(f.d),cr=crc32(d);
+    var h=[].concat([0x50,0x4b,3,4],le(20,2),le(0x0800,2),le(0,2),le(0,2),le(0x21,2),le(cr,4),le(d.length,4),le(d.length,4),le(nm.length,2),le(0,2));
+    parts.push(new Uint8Array(h),nm,d);
+    cd.push(new Uint8Array([].concat([0x50,0x4b,1,2],le(20,2),le(20,2),le(0x0800,2),le(0,2),le(0,2),le(0x21,2),le(cr,4),le(d.length,4),le(d.length,4),le(nm.length,2),le(0,2),le(0,2),le(0,2),le(0,2),le(0,4),le(off,4))),nm);
+    off+=h.length+nm.length+d.length});
+  var cdl=cd.reduce(function(s,a){return s+a.length},0);
+  var end=new Uint8Array([].concat([0x50,0x4b,5,6],le(0,2),le(0,2),le(files.length,2),le(files.length,2),le(cdl,4),le(off,4),le(0,2)));
+  return new Blob(parts.concat(cd,[end]),{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})}
+function xe(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]}).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,"")}
+function xlsxBlob(title,head,rows,widths){var col=function(i){return String.fromCharCode(65+i)},R=[];
+  R.push('<row r="1" ht="22" customHeight="1"><c r="A1" t="inlineStr" s="3"><is><t>'+xe(title)+'</t></is></c></row>');
+  R.push('<row r="2">'+head.map(function(h,i){return'<c r="'+col(i)+'2" t="inlineStr" s="1"><is><t>'+xe(h)+'</t></is></c>'}).join("")+'</row>');
+  rows.forEach(function(r,j){var n=j+3;R.push('<row r="'+n+'">'+r.map(function(v,i){return typeof v==="number"?'<c r="'+col(i)+n+'" s="2"><v>'+v+'</v></c>':'<c r="'+col(i)+n+'" t="inlineStr" s="2"><is><t xml:space="preserve">'+xe(v)+'</t></is></c>'}).join("")+'</row>')});
+  var last=col(head.length-1)+(rows.length+2);
+  var sheet='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0"><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>'+widths.map(function(w,i){return'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>'}).join("")+'</cols><sheetData>'+R.join("")+'</sheetData><autoFilter ref="A2:'+last+'"/><mergeCells count="1"><mergeCell ref="A1:'+col(head.length-1)+'1"/></mergeCells><pageSetup orientation="portrait" fitToWidth="1" fitToHeight="0"/></worksheet>';
+  var styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="13"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF999999"/></left><right style="thin"><color rgb="FF999999"/></right><top style="thin"><color rgb="FF999999"/></top><bottom style="thin"><color rgb="FF999999"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  return zipStore([
+    {n:"[Content_Types].xml",d:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
+    {n:"_rels/.rels",d:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+    {n:"xl/workbook.xml",d:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Техніка" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">\'Техніка\'!$A$2:$'+last.replace(/(\d+)$/,"$$$1")+'</definedName></definedNames></workbook>'},
+    {n:"xl/_rels/workbook.xml.rels",d:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
+    {n:"xl/worksheets/sheet1.xml",d:sheet},{n:"xl/styles.xml",d:styles}])}
+function vehXlsx(list,unitLabel){var L=list.slice().sort(plateCmp);
+  var rows=L.map(function(v,i){return[i+1,v.p||"",v.b||"",v.u||"",v.k||"",v.tab||""]});
+  var title="Список техніки — "+(unitLabel||"")+" — "+(D.date||"")+" ("+L.length+" од.)";
+  var blob=xlsxBlob(title,["№","Номер","Марка","Підрозділ","Тип","АТ / БТ"],rows,[6,16,34,30,20,9]);
+  var nm="Техніка_"+String(unitLabel||"").replace(/[\\\/:*?"<>|·]+/g," ").replace(/\s+/g,"_").replace(/^_+|_+$/g,"").slice(0,60)+"_"+String(D.date||"").replace(/\./g,"-")+".xlsx";
+  var url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=nm;document.body.appendChild(a);a.click();setTimeout(function(){a.remove()},1000);
+  return{url:url,name:nm,n:L.length}}
+function xlBtn(list,unitLabel){var w=document.createElement("div");w.style.cssText="display:flex;flex-direction:column;gap:6px";
+  w.innerHTML='<button type="button" class="xlb" style="text-align:left;padding:16px 18px;border:1px solid #39d353;border-radius:14px;background:#39d35326;color:#39d353;font:inherit;cursor:pointer"><b style="font-size:17px">⬇ Завантажити список техніки</b><br><span style="font-size:13px;opacity:.85">Excel-файл: номер, марка, підрозділ, тип — від меншого номера до більшого ('+list.length+' од.)</span></button><div class="xle" style="font-size:13px"></div>';
+  w.querySelector(".xlb").onclick=function(){var e=w.querySelector(".xle");try{var r=vehXlsx(list,unitLabel);e.innerHTML='Файл «'+esc(r.name)+'» ('+r.n+' од.). Якщо завантаження не почалось — <a href="'+r.url+'" download="'+esc(r.name)+'" style="color:inherit">натисніть тут</a>'}catch(x){e.textContent="Не вдалося сформувати файл: "+x}};
+  return w}
 })();
 
 </script>
