@@ -137,7 +137,7 @@ td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 var T=new URLSearchParams(location.search).get("t")||"";
 var EXEC="https://script.google.com/macros/s/AKfycbx-PdUTpFrYKk9pg-OxnF9tOaGm3zgWQ-OWLQtJ1nsqcuGSyAnM2d5VE37yFO7rbRXH/exec";
 function mkRun(){var ok=null,fail=null,o={withSuccessHandler:function(f){ok=f;return o},withFailureHandler:function(f){fail=f;return o}};
-  ["portalInfo","portalOpen","portalSubmit","portalAddSheet","portalDoc","portalFormAvto"].forEach(function(n){o[n]=function(){var args=[].slice.call(arguments);
+  ["portalInfo","portalOpen","portalSubmit","portalAddSheet","portalDoc","portalFormAvto","portalMine","portalMyReq"].forEach(function(n){o[n]=function(){var args=[].slice.call(arguments);
     fetch(EXEC,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({portal:true,fn:n,args:args})})
       .then(function(r){return r.json()}).then(function(j){if(j&&Object.prototype.hasOwnProperty.call(j,"r")){if(ok)ok(j.r)}else if(fail)fail(j)})
       .catch(function(e){if(fail)fail(e)})}});return o}
@@ -172,7 +172,7 @@ $("#gform").onsubmit=function(e){e.preventDefault();var p=$("#pin").value.trim()
   google.script.run.withSuccessHandler(function(r){$("#gbtn").disabled=false;
     if(!r||!r.ok){$("#gerr").textContent=(r&&r.err)||"Помилка";if(!(r&&r.bad)){$("#pin").hidden=true;$("#gbtn").hidden=true}return}
     PIN=p;D=r;$("#gate").hidden=true;page.hidden=false;if(r.mode==="result"){showResult(r);return}
-    ({"то":function(){start("ТО")},"со":function(){start("СО")},"звірка":recon,"план":plan,"служба":panel})[r.kind]();
+    ({"то":function(){start("ТО")},"со":function(){start("СО")},"звірка":recon,"план":plan,"служба":panel,"заявки":mine})[r.kind]();
   }).withFailureHandler(function(){$("#gbtn").disabled=false;$("#gerr").textContent="Помилка зв'язку, спробуйте ще раз"}).portalOpen(T,p)};
 
 function showResult(r){var bs="padding:12px 24px;border:1px solid #4c8dff;border-radius:999px;background:rgba(76,141,255,.16);color:#4c8dff;font-size:15px;font-weight:bold";
@@ -202,6 +202,7 @@ function allSel(type){var skip=0;D.vehicles.forEach(function(x){if(type==="СО"
 function start(type){var n=D.vehicles.length;
   page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · '+n+' од. · '+esc(D.date)+'</div><h2>Заявка '+type+'</h2><p class="note">Оберіть, що робити.</p></div><div id="st" style="display:grid;gap:12px;max-width:560px"></div>';
   var items=[["⭐ Звіт по всій техніці підрозділу","Стан ТО по кожному авто: крайнє ТО, наступне ТО, що вже настало. Рекомендую почати з нього","#f5c542",function(){plan()}],
+    ["📋 Мої заявки","Перегляд поданих заявок і їхній стан; запит службі ПММ на зміну або анулювання","#b18cff",function(){loadMine(type)}],
     ["Отримати на все","Лише моторна олива на всю техніку підрозділу ("+n+" од.). Трансмісія та інші системи — через «Отримати на вибір»","#4cc27e",function(){form(type);allSel(type)}],
     ["Отримати на вибір","Самостійно позначте потрібні авто","#4c8dff",function(){form(type)}],
     ["Списати все","Скоро","#6b7280",null],["Списати на вибір","Скоро","#6b7280",null]];
@@ -309,6 +310,89 @@ function submit(){var isTO=S.type==="ТО",g=$("#go");g.disabled=true;g.textCont
 function alertBox(t){var F=$("#foot");if(F)F.insertAdjacentHTML("afterbegin",'<div class="err">'+esc(t)+'</div>')}
 function drawDone(){var w=S.done.wait;page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+'</div><h2>'+(w?'Заявка формується…':'Заявку '+S.type+' подано')+'</h2></div>'+
   '<div class="done"><b>Авто в заявці: '+S.done.count+'</b><p class="note">'+(w?'⏳ Заявка формується — зачекайте, будь ласка, 5–10 хв і не закривайте цю сторінку. Єва повідомить в Signal, коли візьме її на опрацювання, і надішле результат.':'✅ Заявка прийнята. Єва повідомить в Signal, що взяла її на опрацювання, і надішле результат (орієнтовно 5–10 хв). Статус — у боті командою «мої заявки». Посилання більше не діє.')+'</p></div>'}
+
+/* ---------- Мої заявки (04.11.2026): перегляд + запит службі на зміну / анулювання ---------- */
+var MY=null;
+function loadMine(back){page.innerHTML='<div class="ph"><h2>Мої заявки</h2><p class="note">Завантаження…</p></div>';
+  google.script.run.withSuccessHandler(function(r){if(!r||!r.ok){page.innerHTML='<div class="ph"><h2>Мої заявки</h2><p class="err">'+esc((r&&r.err)||"Помилка")+'</p></div>';return}
+    D.list=r.list;D.mineBack=back||"";MY=null;mine()}).withFailureHandler(function(){page.innerHTML='<div class="ph"><h2>Мої заявки</h2><p class="err">Помилка зв\'язку, оновіть сторінку</p></div>'}).portalMine(T,PIN)}
+function myGrp(x){return/^погоджено/.test(x.st)?"ok":/^(відхилено|анульовано)/.test(x.st)?"bad":"wait"}
+function myTot(x){var t={};x.vehicles.forEach(function(v){v.items.forEach(function(i){var k=String(i.oil||"").toUpperCase();t[k]=(t[k]||0)+(i.qty||0)})});return t}
+function myQ(x){var q=x.q;if(!q)return"";var w=q.act==="Анулювання"?"анулювання":"зміну";
+  if(q.st==="очікує рішення служби")return'<span class="pill p-info">запит на '+w+' — у службі ПММ</span>';
+  if(q.st==="погоджено")return'<span class="pill p-ok">запит на '+w+' погоджено</span>';
+  if(q.st==="відхилено")return'<span class="pill p-bad">запит на '+w+' відхилено</span>';return""}
+function mine(){var L=D.list||[];MY=MY||{f:"",open:null,mode:"",ed:null,why:"",msg:{}};
+  var F=[["","Усі"],["wait","На розгляді"],["ok","Погоджено"],["bad","Відхилено / анульовано"]],cnt={"":L.length,wait:0,ok:0,bad:0};
+  L.forEach(function(x){cnt[myGrp(x)]++});
+  var vis=L.filter(function(x){return!MY.f||myGrp(x)===MY.f});
+  page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · '+L.length+' заяв. · '+esc(D.date)+'</div><h2>Мої заявки</h2>'+
+    '<p class="note">Тут ваші подані заявки. Змінити або анулювати заявку можна лише через запит службі ПММ: після рішення служби Єва повідомить вас у Signal. Заявки, по яких уже сформовано акт списання, не змінюються.</p></div>'+
+    (D.mineBack?'<div><button type="button" class="sm" id="myback">← Назад</button></div>':'')+
+    '<div class="sums">'+F.filter(function(f){return f[0]===""||cnt[f[0]]}).map(function(f){return'<button type="button" class="sm'+(MY.f===f[0]?" act":"")+'" data-f="'+f[0]+'"><b>'+cnt[f[0]]+'</b><span>'+f[1]+'</span></button>'}).join("")+'</div>'+
+    '<div class="list" id="ml">'+(vis.length?"":'<p class="note">'+(L.length?"Нічого не знайдено.":"Заявок поки немає.")+'</p>')+'</div>';
+  var bk=$("#myback");if(bk)bk.onclick=function(){start(D.mineBack)};
+  Array.prototype.forEach.call(document.querySelectorAll(".sums .sm"),function(b){b.onclick=function(){MY.f=b.getAttribute("data-f");mine()}});
+  var ml=$("#ml");vis.forEach(function(x){ml.appendChild(myCard(x))})}
+function myCard(x){var on=MY.open===x.id,el=document.createElement("div"),pl=x.vehicles.map(function(v){return v.plate}),t=myTot(x);
+  el.className="veh"+(on?" on":"");
+  el.innerHTML='<div class="vh" role="button" tabindex="0"><div class="vt"><b>№'+esc(x.id)+'</b><span>'+esc(x.type)+' · '+esc(x.d)+' · '+esc(pl.slice(0,3).join(", "))+(pl.length>3?" +"+(pl.length-3):"")+'</span></div>'+
+    '<span class="pill '+esc(x.sc)+'">'+esc(x.st)+'</span></div>';
+  el.querySelector(".vh").onclick=function(){MY.open=on?null:x.id;MY.mode="";mine()};
+  if(!on)return el;
+  var b=document.createElement("div");b.className="vb";
+  var h='<div class="tot">'+Object.keys(t).map(function(o){return'<span>'+esc(o)+' – '+f1(t[o])+' л</span>'}).join("")+'</div>'+
+    (x.place?'<div class="note">📍 Місце отримання: '+esc(x.place)+'</div>':'')+(myQ(x)?'<div class="row">'+myQ(x)+(x.q&&x.q.cm?'<span class="note">Коментар служби: '+esc(x.q.cm)+'</span>':'')+'</div>':'');
+  if(MY.msg[x.id])h+='<div class="done"><b>'+esc(MY.msg[x.id])+'</b></div>';
+  if(MY.mode==="ed")h+=myEditHtml(x);
+  else if(MY.mode==="an")h+='<div class="row" style="flex-direction:column;align-items:stretch"><b>Анулювати заявку №'+esc(x.id)+'</b><span class="note">Вкажіть причину. Заявку буде анульовано лише після погодження службою ПММ: видачу за нею скасують, файл заявки стане недійсним.</span>'+
+    '<textarea id="mywhy" rows="3" style="width:100%;border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:8px;padding:8px;font:inherit" placeholder="Причина анулювання">'+esc(MY.why)+'</textarea>'+
+    '<div class="row"><button type="button" class="go" id="myan" style="flex:1;background:var(--bad)">Надіслати запит на анулювання</button><button type="button" class="sm" id="myno">Скасувати</button></div><div class="err" id="myerr"></div></div>';
+  else{h+='<div class="list">'+x.vehicles.map(function(v){return'<div class="row" style="justify-content:space-between;border-top:1px dashed var(--line);padding-top:6px"><span><b style="font-family:var(--f-mono)">'+esc(v.plate)+'</b> <span class="note">'+esc(v.brand)+'</span></span>'+
+      (x.type==="ТО"&&v.odo!==""?'<span class="note">одометр '+km(pnum(v.odo))+' км</span>':'')+'</div><div class="note">'+v.items.map(function(i){return esc(i.oil)+(i.agg&&i.agg!=="Двигун"?" ("+esc(i.agg)+")":"")+" — "+f1(i.qty)+" л"}).join("; ")+'</div>'}).join("")+'</div>';
+    if(x.can)h+='<div class="row"><button type="button" class="go" id="myed" style="flex:1">Змінити</button><button type="button" class="go" id="myan0" style="flex:1;background:var(--bad)">Анулювати</button></div>';
+    else if(!MY.msg[x.id])h+='<p class="note">'+(x.q&&x.q.st==="очікує рішення служби"?"Запит уже на розгляді служби ПММ — дочекайтесь рішення.":/списано|анульовано/.test(x.st)?"Цю заявку змінити не можна.":"")+'</p>'}
+  b.innerHTML=h;el.appendChild(b);
+  var g=function(s){return b.querySelector(s)};
+  if(g("#myed"))g("#myed").onclick=function(){MY.mode="ed";MY.why="";MY.ed={place:x.place||"Центр",vs:x.vehicles.map(function(v){return{plate:v.plate,brand:v.brand,keep:true,odo:v.odo===""?"":String(v.odo),items:v.items.map(function(i){return{oil:i.oil,agg:i.agg,qty:i.qty,keep:true}})}})};mine()};
+  if(g("#myan0"))g("#myan0").onclick=function(){MY.mode="an";MY.why="";mine()};
+  if(g("#myno"))g("#myno").onclick=function(){MY.mode="";mine()};
+  if(g("#mywhy"))g("#mywhy").oninput=function(e){MY.why=e.target.value};
+  if(g("#myan"))g("#myan").onclick=function(){if(String(MY.why).trim().length<3){g("#myerr").textContent="Вкажіть причину анулювання.";return}mySend(x,{id:x.id,act:"анулювати",reason:MY.why},this)};
+  if(MY.mode==="ed")myEditBind(x,b);
+  return el}
+function myEditHtml(x){var E=MY.ed,isTO=x.type==="ТО";
+  return'<div style="display:flex;flex-direction:column;gap:10px"><b>Зміни до заявки №'+esc(x.id)+'</b><span class="note">Змініть кількість, оливу'+(isTO?", вузол або показник одометра":"")+', приберіть зайві авто чи позиції (зніміть позначку). Нові авто додати не можна — для них подайте нову заявку. Після погодження службою стару заявку буде анульовано, а виправлену подано як нову.</span>'+
+    E.vs.map(function(v,vi){return'<div class="veh'+(v.keep?" on":"")+'"><label class="vh"><input type="checkbox" data-v="'+vi+'" data-f="vkeep" '+(v.keep?"checked":"")+'><div class="vt"><b>'+esc(v.plate)+'</b><span>'+esc(v.brand)+'</span></div></label>'+
+      (v.keep?'<div class="vb">'+(isTO?'<div class="row"><span>Показник одометра</span><input type="text" inputmode="numeric" data-v="'+vi+'" data-f="odo" value="'+esc(v.odo)+'" style="width:120px"></div>':'')+
+        v.items.map(function(i,ii){return'<div class="sys" style="grid-template-columns:auto minmax(0,1fr) auto"><input type="checkbox" data-v="'+vi+'" data-i="'+ii+'" data-f="ikeep" '+(i.keep?"checked":"")+' aria-label="залишити позицію">'+
+          '<div class="row"><input type="text" data-v="'+vi+'" data-i="'+ii+'" data-f="oil" value="'+esc(i.oil)+'" placeholder="олива" style="width:130px"'+(i.keep?"":" disabled")+'>'+
+          (isTO&&i.agg!=="Двигун"?'<input type="text" data-v="'+vi+'" data-i="'+ii+'" data-f="agg" value="'+esc(i.agg)+'" placeholder="вузол" style="width:140px"'+(i.keep?"":" disabled")+'>':'<span class="note">'+esc(i.agg||"")+'</span>')+'</div>'+
+          '<input type="number" step="0.1" min="0" data-v="'+vi+'" data-i="'+ii+'" data-f="qty" value="'+(i.qty==null?"":i.qty)+'" aria-label="літрів"'+(i.keep?"":" disabled")+'></div>'}).join("")+'</div>':'')+'</div>'}).join("")+
+    '<div class="row"><span>📍 Місце отримання</span><select data-f="place">'+["Центр","Схід"].map(function(p){return'<option'+(p===E.place?" selected":"")+'>'+p+'</option>'}).join("")+'</select></div>'+
+    '<textarea id="mywhy" rows="2" style="width:100%;border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:8px;padding:8px;font:inherit" placeholder="Коментар для служби (необов\'язково)">'+esc(MY.why)+'</textarea>'+
+    '<div class="row"><button type="button" class="go" id="mysend" style="flex:1">Надіслати зміни на погодження</button><button type="button" class="sm" id="myno">Скасувати</button></div><div class="err" id="myerr"></div></div>'}
+function myEditBind(x,b){var E=MY.ed;
+  b.querySelectorAll("[data-f]").forEach(function(inp){var f=inp.dataset.f,vi=inp.dataset.v,ii=inp.dataset.i;
+    var h=function(e){var t=e.target,v=E.vs[vi];
+      if(f==="vkeep"){v.keep=t.checked;mine();return}
+      if(f==="ikeep"){v.items[ii].keep=t.checked;mine();return}
+      if(f==="place"){E.place=t.value;return}
+      if(f==="odo"){v.odo=t.value;return}
+      if(f==="qty"){v.items[ii].qty=pnum(t.value);return}
+      v.items[ii][f]=t.value};
+    if(f==="vkeep"||f==="ikeep"||f==="place")inp.onchange=h;else inp.oninput=h});
+  var send=b.querySelector("#mysend");if(send)send.onclick=function(){
+    var vs=E.vs.filter(function(v){return v.keep}).map(function(v){return{plate:v.plate,odometer:String(v.odo||"").replace(/\s/g,""),items:v.items.filter(function(i){return i.keep&&String(i.oil||"").trim()&&i.qty>0}).map(function(i){return{oil:String(i.oil).trim(),agg:i.agg,qty:i.qty}})}}).filter(function(v){return v.items.length});
+    if(!vs.length){b.querySelector("#myerr").textContent="Не лишилось жодного авто з оливою. Якщо заявка не потрібна — оберіть «Анулювати».";return}
+    if(x.type==="ТО"&&vs.some(function(v){return pnum(v.odometer)==null})){b.querySelector("#myerr").textContent="Вкажіть показник одометра для кожного авто.";return}
+    mySend(x,{id:x.id,act:"змінити",reason:MY.why,place:E.place,vehicles:vs},this)}}
+function mySend(x,payload,btn){btn.disabled=true;btn.textContent="Надсилаю…";var er=document.getElementById("myerr");
+  google.script.run.withSuccessHandler(function(r){btn.disabled=false;
+    if(!r||!r.ok){if(er)er.textContent=(r&&r.err)||"Не вдалося надіслати";btn.textContent="Спробувати ще раз";return}
+    x.can=false;x.q={act:payload.act==="анулювати"?"Анулювання":"Редагування",st:"очікує рішення служби"};MY.mode="";
+    MY.msg[x.id]="📨 Запит передано службі ПММ. Щойно рішення буде прийнято, Єва повідомить вас у Signal.";mine()})
+   .withFailureHandler(function(){btn.disabled=false;btn.textContent="Спробувати ще раз";if(er)er.textContent="Помилка зв'язку, спробуйте ще раз"}).portalMyReq(T,PIN,payload)}
 
 /* ---------- Звірка ---------- */
 function recon(){var A=D.vehicles.filter(function(v){return v.a}),by={};
