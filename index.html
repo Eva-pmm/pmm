@@ -327,7 +327,7 @@ function submit(){var isTO=S.type==="ТО",g=$("#go");g.disabled=true;g.textCont
   function back(t){S.done=null;drawForm();alertBox(t)}
   google.script.run.withSuccessHandler(function(r){
     if(!r||!r.ok){back((r&&r.err)||"Не вдалося подати");return}
-    S.done={count:r.count};drawDone()}).withFailureHandler(function(){back("Помилка зв'язку, спробуйте ще раз")}).portalSubmit(T,PIN,payload)}
+    S.done={count:r.count};drawDone();/* 05.11.2026: одразу просимо обробити заявку, без очікування щохвилинного запуску */try{fetch(EXEC,{method:"POST",keepalive:true,headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({portal:true,fn:"portalKick",args:[T]})}).catch(function(){})}catch(x){}}).withFailureHandler(function(){back("Помилка зв'язку, спробуйте ще раз")}).portalSubmit(T,PIN,payload)}
 function alertBox(t){var F=$("#foot");if(F)F.insertAdjacentHTML("afterbegin",'<div class="err">'+esc(t)+'</div>')}
 function drawDone(){var w=S.done.wait;page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+'</div><h2>'+(w?'Заявка формується…':'Заявку '+S.type+' подано')+'</h2></div>'+
   '<div class="done"><b>Авто в заявці: '+S.done.count+'</b><p class="note">'+(w?'⏳ Заявка формується — зачекайте, будь ласка, 5–10 хв і не закривайте цю сторінку. Єва повідомить в Signal, коли візьме її на опрацювання, і надішле результат.':'✅ Заявка прийнята. Єва повідомить в Signal, що взяла її на опрацювання, і надішле результат (орієнтовно 5–10 хв). Статус — у боті командою «мої заявки». Посилання більше не діє.')+'</p></div>'}
