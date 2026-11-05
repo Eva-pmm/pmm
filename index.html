@@ -102,6 +102,17 @@ td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .sum b{font:700 20px var(--f-display)}
 .sum span{font-size:12px;color:var(--muted)}
 .note{font-size:12.5px;color:var(--muted)}
+
+/* 05.11.2026: індикатор очікування і відгук кнопок */
+button{transition:transform .08s,filter .08s}
+button:active{transform:scale(.96);filter:brightness(1.35)}
+.btn-busy{opacity:.6;filter:brightness(1.3);cursor:progress!important}
+#busyw{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.25);cursor:progress}
+#busyw .busybar{position:fixed;top:0;left:0;height:3px;width:40%;background:#f5c542;animation:busymove 1.1s linear infinite}
+#busyw .busybox{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1f232a;color:#fff;border:1px solid #f5c542;border-radius:999px;padding:10px 18px;font:15px/1.2 Arial,sans-serif;display:flex;gap:10px;align-items:center;box-shadow:0 4px 18px rgba(0,0,0,.4)}
+#busyw .busyspin{width:16px;height:16px;border:2px solid #f5c542;border-top-color:transparent;border-radius:50%;animation:busyrot .8s linear infinite}
+@keyframes busyrot{to{transform:rotate(360deg)}}
+@keyframes busymove{0%{left:-40%}100%{left:100%}}
 </style><style>
 .wrap{max-width:760px}
 .gate{min-height:70vh;display:grid;place-items:center}
@@ -136,11 +147,21 @@ td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 <script>
 var T=new URLSearchParams(location.search).get("t")||"";
 var EXEC="https://script.google.com/macros/s/AKfycbx-PdUTpFrYKk9pg-OxnF9tOaGm3zgWQ-OWLQtJ1nsqcuGSyAnM2d5VE37yFO7rbRXH/exec";
+/* 05.11.2026: індикатор очікування — після кожного натискання одразу видно, що запит пішов */
+var BUSY=0,BUSY_T=null,BUSY_S=0,LAST_BTN=null;
+document.addEventListener("click",function(e){var b=e.target&&e.target.closest?e.target.closest("button"):null;if(b)LAST_BTN=b},true);
+function busyOn(){if(BUSY++)return;var w=document.getElementById("busyw");if(!w){w=document.createElement("div");w.id="busyw";
+  w.innerHTML='<div class="busybar"></div><div class="busybox"><span class="busyspin"></span><span id="busytx">Зачекайте, завантажую…</span></div>';document.body.appendChild(w)}
+  w.style.display="block";BUSY_S=0;document.getElementById("busytx").textContent="Зачекайте, завантажую…";
+  clearInterval(BUSY_T);BUSY_T=setInterval(function(){BUSY_S++;var t=document.getElementById("busytx");if(t)t.textContent="Зачекайте, завантажую… "+BUSY_S+" с"},1000);
+  if(LAST_BTN){LAST_BTN.classList.add("btn-busy");LAST_BTN.setAttribute("data-busy","1")}}
+function busyOff(){if(BUSY>0)BUSY--;if(BUSY)return;clearInterval(BUSY_T);var w=document.getElementById("busyw");if(w)w.style.display="none";
+  [].forEach.call(document.querySelectorAll('[data-busy="1"]'),function(b){b.classList.remove("btn-busy");b.removeAttribute("data-busy")});LAST_BTN=null}
 function mkRun(){var ok=null,fail=null,o={withSuccessHandler:function(f){ok=f;return o},withFailureHandler:function(f){fail=f;return o}};
-  ["portalInfo","portalOpen","portalSubmit","portalAddSheet","portalDoc","portalFormAvto","portalMine","portalMyReq"].forEach(function(n){o[n]=function(){var args=[].slice.call(arguments);
+  ["portalInfo","portalOpen","portalSubmit","portalAddSheet","portalDoc","portalFormAvto","portalMine","portalMyReq"].forEach(function(n){o[n]=function(){var args=[].slice.call(arguments);busyOn();
     fetch(EXEC,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({portal:true,fn:n,args:args})})
-      .then(function(r){return r.json()}).then(function(j){if(j&&Object.prototype.hasOwnProperty.call(j,"r")){if(ok)ok(j.r)}else if(fail)fail(j)})
-      .catch(function(e){if(fail)fail(e)})}});return o}
+      .then(function(r){return r.json()}).then(function(j){busyOff();if(j&&Object.prototype.hasOwnProperty.call(j,"r")){if(ok)ok(j.r)}else if(fail)fail(j)})
+      .catch(function(e){busyOff();if(fail)fail(e)})}});return o}
 var google={script:{get run(){return mkRun()}}};
 </script>
 <script>
