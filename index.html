@@ -503,13 +503,16 @@ $("#pq").oninput=function(e){P.q=e.target.value;pbody()};pbody()}
 
 /* ---------- Завантажити список техніки (Excel), 04.11.2026: сортування — серія номера, далі число (ВІ 111 → ВІ 112 → НІ 211), БТ — за числом ---------- */
 var UA_AB="АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ";
-function plateKey(v){var s=String(v.p||"").toUpperCase().replace(/\s+/g,""),m=s.match(/^([^\d]*)(\d*)(.*)$/)||["",s,"",""];
-  return{bt:v.tab==="БТ"?1:0,pre:m[1],num:m[2]?parseInt(m[2],10):Infinity,dig:m[2],rest:m[3],raw:s}}
+var L2C={A:"А",B:"В",C:"С",E:"Е",H:"Н",I:"І",K:"К",M:"М",O:"О",P:"Р",T:"Т",X:"Х",Y:"У"}; /* латиниця → кирилиця, як normPlate (05.11.2026: BI/HI/KH сортувались окремою групою) */
+function plateKey(v){var s=String(v.p||"").toUpperCase().replace(/\s+/g,"").replace(/[A-Z]/g,function(c){return L2C[c]||c}),bt=v.tab==="БТ"?1:0;
+  if(bt){var q=s.match(/^(\d+)-(\d+)(.*)$/);if(q)return{bt:1,pre:q[1],num:parseInt(q[2],10),dig:q[2],rest:q[3],raw:s}}
+  var m=s.match(/^([^\d]*)(\d*)(.*)$/)||["",s,"",""];
+  return{bt:bt,pre:m[1],num:m[2]?parseInt(m[2],10):Infinity,dig:m[2],rest:m[3],raw:s}}
 function preCmp(a,b){for(var i=0;i<Math.max(a.length,b.length);i++){var x=a[i],y=b[i];if(x===y)continue;if(x==null)return-1;if(y==null)return 1;
   var ix=UA_AB.indexOf(x),iy=UA_AB.indexOf(y);if(ix<0)ix=100+x.charCodeAt(0);if(iy<0)iy=100+y.charCodeAt(0);return ix-iy}return 0}
 function plateCmp(a,b){var A=plateKey(a),B=plateKey(b);
   if(A.bt!==B.bt)return A.bt-B.bt;
-  if(!A.bt){var c=preCmp(A.pre,B.pre);if(c)return c}
+  var c=A.bt?(A.pre<B.pre?-1:A.pre>B.pre?1:0):preCmp(A.pre,B.pre);if(c)return c;
   if(A.num!==B.num)return A.num<B.num?-1:1;
   return A.rest<B.rest?-1:A.rest>B.rest?1:(A.raw<B.raw?-1:A.raw>B.raw?1:0)}
 var CRCT=(function(){var t=[],c,n,k;for(n=0;n<256;n++){c=n;for(k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
