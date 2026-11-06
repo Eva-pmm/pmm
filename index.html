@@ -158,7 +158,7 @@ function busyOn(){if(BUSY++)return;var w=document.getElementById("busyw");if(!w)
 function busyOff(){if(BUSY>0)BUSY--;if(BUSY)return;clearInterval(BUSY_T);var w=document.getElementById("busyw");if(w)w.style.display="none";
   [].forEach.call(document.querySelectorAll('[data-busy="1"]'),function(b){b.classList.remove("btn-busy");b.removeAttribute("data-busy")});LAST_BTN=null}
 function mkRun(){var ok=null,fail=null,o={withSuccessHandler:function(f){ok=f;return o},withFailureHandler:function(f){fail=f;return o}};
-  ["portalInfo","portalOpen","portalSubmit","portalAddSheet","portalDoc","portalFormAvto","portalMine","portalMyReq"].forEach(function(n){o[n]=function(){var args=[].slice.call(arguments);busyOn();
+  ["portalInfo","portalOpen","portalSubmit","portalAddSheet","portalDoc","portalFormAvto","portalMine","portalMyReq","portalDecide"].forEach(function(n){o[n]=function(){var args=[].slice.call(arguments);busyOn();
     fetch(EXEC,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({portal:true,fn:n,args:args})})
       .then(function(r){return r.json()}).then(function(j){busyOff();if(j&&Object.prototype.hasOwnProperty.call(j,"r")){if(ok)ok(j.r)}else if(fail)fail(j)})
       .catch(function(e){busyOff();if(fail)fail(e)})}});return o}
@@ -204,13 +204,26 @@ function showResult(r){var bs="padding:12px 24px;border:1px solid #4c8dff;border
     page.appendChild(bx);
     var goA=function(all){$("#abe").textContent="";google.script.run.withSuccessHandler(function(x){if(!x||!x.ok){$("#abe").textContent=(x&&x.err)||"Помилка";return}D=x;form("ТО")}).withFailureHandler(function(){$("#abe").textContent="Помилка зв'язку, спробуйте ще раз"}).portalFormAvto(T,PIN,all)};
     $("#ab1").onclick=function(){goA(false)};$("#ab2").onclick=function(){goA(true)}}
-  if(r.hasDoc)$("#dlb").onclick=function(){var b=$("#dlb");b.disabled=true;$("#dle").textContent="Готується файл…";
+  if(r.svc)svcBox(r.svc);
+if(r.hasDoc)$("#dlb").onclick=function(){var b=$("#dlb");b.disabled=true;$("#dle").textContent="Готується файл…";
     google.script.run.withSuccessHandler(function(s){b.disabled=false;if(!s||!s.ok){$("#dle").textContent=(s&&s.err)||"Помилка";return}
       var bin=atob(s.b64),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
       var url=URL.createObjectURL(new Blob([u],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}));
       var a=document.createElement("a");a.href=url;a.download=s.name;document.body.appendChild(a);a.click();
       $("#dle").innerHTML='Якщо завантаження не почалось — <a href="'+url+'" download="'+s.name+'" style="color:inherit">натисніть тут</a>'})
     .withFailureHandler(function(){b.disabled=false;$("#dle").textContent="Помилка, спробуйте ще раз"}).portalDoc(T,PIN)}}
+function svcBox(v){var bx=$("#svcb");if(!bx){bx=document.createElement("div");bx.id="svcb";bx.style.cssText="margin:16px 0;padding:14px;border:1px solid #2a3039;border-radius:12px;background:#16191e;text-align:center";page.appendChild(bx)}
+var B=function(d,c,t){return '<button data-d="'+d+'" data-t="'+t+'" style="display:block;width:100%;margin:8px 0;padding:12px;border:1px solid '+c+';border-radius:999px;background:transparent;color:'+c+';font-size:15px;font-weight:bold">'+t+'</button>'};
+var h='<div style="font-weight:bold;color:#ffd84d;margin-bottom:4px">Рішення служби ПММ — заявка №'+esc(v.id)+'</div><div style="font-size:13px;opacity:.8;margin-bottom:8px">Стан: '+esc(v.state)+'</div>';
+if(v.open){h+='<textarea id="svcr" rows="2" placeholder="Причина / коментар для заявника (обов\'язково для «На уточнення»)" style="width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1px solid #2a3039;background:#0b0d10;color:#f1f3f5;font:14px Arial,sans-serif"></textarea>'+B("approve","#39d353","✅ ПОГОДИТИ")+(v.onlyApprove?'':B("clarify","#f5a623","⚠️ НА УТОЧНЕННЯ")+B("reject","#ff5c5c","❌ ВІДХИЛИТИ"))}
+h+='<div id="svce" style="margin-top:8px;font-size:14px;white-space:pre-line"></div>';bx.innerHTML=h;
+[].forEach.call(bx.querySelectorAll("button[data-d]"),function(b){b.onclick=function(){var d=b.getAttribute("data-d"),rs=($("#svcr")||{}).value||"";
+if(d==="clarify"&&!rs.trim()){$("#svce").textContent="Для «На уточнення» впишіть причину.";return}
+if(b.getAttribute("data-ok")!=="1"){[].forEach.call(bx.querySelectorAll("button[data-d]"),function(o){o.removeAttribute("data-ok");o.textContent=o.getAttribute("data-t")});b.setAttribute("data-ok","1");b.textContent="Натисніть ще раз: "+b.getAttribute("data-t");$("#svce").textContent="";return}
+google.script.run.withSuccessHandler(function(x){if(!x||!x.ok){$("#svce").textContent=(x&&x.err)||"Помилка";return}
+if(x.svc)svcBox(x.svc);$("#svce").textContent=x.text;
+if(x.done)try{fetch(EXEC,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({portal:true,fn:"portalDecideKick",args:[T]})})}catch(e){}})
+.withFailureHandler(function(){$("#svce").textContent="Помилка зв'язку, спробуйте ще раз"}).portalDecide(T,PIN,{d:d,reason:rs})}})}
 /* ---------- ТО / СО ---------- */
 /* вантажівки (регламент 30 000 км): у базі 5W30 — допустимо і 10W40 / 10W30 (п. 4.1.3), 03.11.2026 */
 function eOpts(v){var o=oils(v.e.o),k=function(x){return x.replace(/[^0-9W]/g,"")};if(interval(v)===30000&&o.some(function(x){return k(x)==="5W30"}))["10W40","10W30"].forEach(function(a){if(!o.some(function(x){return k(x)===a}))o.push(a)});return o}
