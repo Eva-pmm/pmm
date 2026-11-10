@@ -531,10 +531,24 @@ function plan(){pcss();PR=D.vehicles.map(function(v){var iv=interval(v);return{v
 function g(r){return!r.iv?3:r.v.e.km==null?1:2}return g(a)-g(b)||(a.nx||0)-(b.nx||0)});P={f:"",q:""};
 page.innerHTML='<div class="ph"><div class="eyebrow">'+esc(D.unit)+' · моторна олива · '+esc(D.date)+'</div><h2>План ТО</h2>'+
 '<p class="note">Впишіть поточний показник одометра біля авто — стан оновиться одразу: «можна на ТО», «допустимо» (до −8% від регламенту) або «ще зарано, залишилось N км». Авто без зареєстрованого ТО — перша видача, можна на ТО. Регламент: легкові, пікапи, буси — 10 000 км; великі буси — 15 000 км; вантажні, спецавто — 30 000 км; БТ — 1 000 км / 250 м/г; трактори й екскаватори — індивідуально.</p></div>'+
-'<div id="pgo"></div><div class="sums" id="psum"></div><div class="tools"><input type="search" id="pq" placeholder="Пошук: номер або марка" style="flex:1 1 200px"></div>'+
+'<div id="pgo"></div><div id="pxl2" style="max-width:560px"></div><div class="sums" id="psum"></div><div class="tools"><input type="search" id="pq" placeholder="Пошук: номер або марка" style="flex:1 1 200px"></div>'+
 '<div class="plist" id="pb"></div>';
-$("#pq").oninput=function(e){P.q=e.target.value;pbody()};pbody()}
+$("#pxl2").appendChild(planXlBtn());$("#pq").oninput=function(e){P.q=e.target.value;pbody()};pbody()}
 
+/* ---------- План ТО → Excel (10.11.2026): номер, марка, крайнє ТО (двигун, трансмісія), наступне ТО, стан ---------- */
+function planXlsx(){var R=PR.slice().sort(function(a,b){return plateCmp(a.v,b.v)});
+var num=function(x){return typeof x==="number"&&isFinite(x)?x:(x==null||x===""?"":x)};
+var rows=R.map(function(r,i){var v=r.v,e=v.e||{},t=v.t||{},o=pnum(String(r.o||"").replace(/\s/g,"")),s=pst(v,r.o);
+return[i+1,v.p||"",v.b||"",v.ivl||v.k||"",num(e.km),e.d||"",e.o||"",num(t.km),t.d||"",t.o||"",r.iv?r.iv:"індивідуально",num(r.nx),o==null?"":o,s[0]==="wait"?"пробіг не введено":s[1]]});
+var title="План ТО — "+(D.unit||"")+" — "+(D.date||"")+" ("+R.length+" од.)";
+var blob=xlsxBlob(title,["№","Номер","Марка","Клас / тип","Двигун: крайнє ТО, км","Двигун: дата","Моторна олива","Трансмісія: крайня заміна, км","Трансмісія: дата","Трансмісійна олива","Регламент, км","Наступне ТО з, км","Поточний пробіг","Стан"],rows,[5,13,28,18,13,11,12,14,11,12,11,13,12,32]);
+var nm="План_ТО_"+String(D.unit||"").replace(/[\\\/:*?"<>|·]+/g," ").replace(/\s+/g,"_").replace(/^_+|_+$/g,"").slice(0,60)+"_"+String(D.date||"").replace(/\./g,"-")+".xlsx";
+var url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=nm;document.body.appendChild(a);a.click();setTimeout(function(){a.remove()},1000);
+return{url:url,name:nm,n:R.length}}
+function planXlBtn(){var w=document.createElement("div");w.style.cssText="display:flex;flex-direction:column;gap:6px";
+w.innerHTML='<button type="button" class="xlb" style="text-align:left;padding:16px 18px;border:1px solid #39d353;border-radius:14px;background:#39d35326;color:#39d353;font:inherit;cursor:pointer"><b style="font-size:17px">⬇ Завантажити план ТО (Excel)</b><br><span style="font-size:13px;opacity:.85">Номер, марка, крайнє ТО (пробіг, дата, олива — двигун і трансмісія), наступне ТО і стан ('+PR.length+' од.). Пробіги, які ви ввели на сторінці, теж потраплять у файл.</span></button><div class="xle" style="font-size:13px"></div>';
+w.querySelector(".xlb").onclick=function(){var e=w.querySelector(".xle");try{var r=planXlsx();e.innerHTML='Файл «'+esc(r.name)+'» ('+r.n+' од.). Якщо завантаження не почалось — <a href="'+r.url+'" download="'+esc(r.name)+'" style="color:inherit">натисніть тут</a>'}catch(x){e.textContent="Не вдалося сформувати файл: "+x}};
+return w}
 /* ---------- Завантажити список техніки (Excel), 04.11.2026: сортування — серія номера, далі число (ВІ 111 → ВІ 112 → НІ 211), БТ — за числом ---------- */
 var UA_AB="АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ";
 var L2C={A:"А",B:"В",C:"С",E:"Е",H:"Н",I:"І",K:"К",M:"М",O:"О",P:"Р",T:"Т",X:"Х",Y:"У"}; /* латиниця → кирилиця, як normPlate (05.11.2026: BI/HI/KH сортувались окремою групою) */
