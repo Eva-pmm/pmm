@@ -538,10 +538,11 @@ $("#pxl2").appendChild(planXlBtn());$("#pq").oninput=function(e){P.q=e.target.va
 /* ---------- План ТО → Excel (10.11.2026): номер, марка, крайнє ТО (двигун, трансмісія), наступне ТО, стан ---------- */
 function planXlsx(){var R=PR.slice().sort(function(a,b){return plateCmp(a.v,b.v)});
 var num=function(x){return typeof x==="number"&&isFinite(x)?x:(x==null||x===""?"":x)};
-var rows=R.map(function(r,i){var v=r.v,e=v.e||{},t=v.t||{},o=pnum(String(r.o||"").replace(/\s/g,"")),s=pst(v,r.o);
-return[i+1,v.p||"",v.b||"",v.ivl||v.k||"",num(e.km),e.d||"",e.o||"",num(t.km),t.d||"",t.o||"",r.iv?r.iv:"індивідуально",num(r.nx),o==null?"":o,s[0]==="wait"?"пробіг не введено":s[1]]});
+var qty=function(x){var a=x.iss!=null&&x.iss!==""?+x.iss:NaN,b=x.v!=null&&x.v!==""?+x.v:NaN;return isFinite(a)&&a>0?[a,"видано"]:isFinite(b)&&b>0?[b,"норма в базі (ще не видавалось)"]:["",""]};
+var rows=R.map(function(r,i){var v=r.v,e=v.e||{},t=v.t||{},o=pnum(String(r.o||"").replace(/\s/g,"")),s=pst(v,r.o),qe=qty(e),qt=qty(t);
+return[i+1,v.p||"",v.b||"",v.ivl||v.k||"",num(e.km),e.d||"",e.o||"",qe[0],qe[1],num(t.km),t.d||"",t.o||"",qt[0],qt[1],r.iv?r.iv:"індивідуально",num(r.nx),o==null?"":o,s[0]==="wait"?"пробіг не введено":s[1]]});
 var title="План ТО — "+(D.unit||"")+" — "+(D.date||"")+" ("+R.length+" од.)";
-var blob=xlsxBlob(title,["№","Номер","Марка","Клас / тип","Двигун: крайнє ТО, км","Двигун: дата","Моторна олива","Трансмісія: крайня заміна, км","Трансмісія: дата","Трансмісійна олива","Регламент, км","Наступне ТО з, км","Поточний пробіг","Стан"],rows,[5,13,28,18,13,11,12,14,11,12,11,13,12,32]);
+var blob=xlsxBlob(title,["№","Номер","Марка","Клас / тип","Двигун: крайнє ТО, км","Двигун: дата","Моторна олива","Моторна: кількість, л","Моторна: звідки","Трансмісія: крайня заміна, км","Трансмісія: дата","Трансмісійна олива","Трансмісія: кількість, л","Трансмісія: звідки","Регламент, км","Наступне ТО з, км","Поточний пробіг","Стан"],rows,[5,13,28,18,13,11,12,11,16,14,11,12,11,16,11,13,12,32]);
 var nm="План_ТО_"+String(D.unit||"").replace(/[\\\/:*?"<>|·]+/g," ").replace(/\s+/g,"_").replace(/^_+|_+$/g,"").slice(0,60)+"_"+String(D.date||"").replace(/\./g,"-")+".xlsx";
 var url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=nm;document.body.appendChild(a);a.click();setTimeout(function(){a.remove()},1000);
 return{url:url,name:nm,n:R.length}}
